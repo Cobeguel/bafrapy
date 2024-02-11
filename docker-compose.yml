@@ -1,6 +1,4 @@
 
-# Create clickhouse standalone with a volume
-
 services:
   database:
     container_name: bafrapy_clickhouse
@@ -17,9 +15,9 @@ services:
     environment:
       - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config.xml
       - CLICKHOUSE_LOG=/var/log/clickhouse-server/clickhouse-server.log
-      - CLICKHOUSE_USER=clickhouse
-      - CLICKHOUSE_PASSWORD=clickhouse
-      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=${DB_USER}
+      - CLICKHOUSE_PASSWORD=${DB_PASSWORD}
+      - CLICKHOUSE_DB=${DB_DATABASE}
 
 volumes:
   clickhouse:
