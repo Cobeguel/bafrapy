@@ -1,0 +1,25 @@
+
+# Create clickhouse standalone with a volume
+
+services:
+  database:
+    container_name: bafrapy_clickhouse
+    image: clickhouse/clickhouse-server:23.9.5-alpine
+    ports:
+      - 8123:8123
+      - 9000:9000
+    volumes:
+      - ./clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ./clickhouse/keys:/etc/clickhouse-server/keys
+      - ./clickhouse/log:/var/log/clickhouse-server
+      - ./clickhouse/data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config.xml
+      - CLICKHOUSE_LOG=/var/log/clickhouse-server/clickhouse-server.log
+      - CLICKHOUSE_USER=clickhouse
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DB=default
+
+volumes:
+  clickhouse:
