@@ -1,5 +1,7 @@
 import pandas as pd
 import urllib3
+import logging
+
 from dataclasses import dataclass
 from bafrapy.libs.singleton import Singleton
 from clickhouse_connect import get_client, common
@@ -7,7 +9,7 @@ from clickhouse_connect.driver.client import Client
 from datetime import date
 from environs import Env
 from typing import Iterator
-import asyncio
+
 
 @dataclass
 class DataFields(metaclass=Singleton):
@@ -25,6 +27,7 @@ class DataRepository(metaclass=Singleton):
     client: Client = None
 
     def __init__(self, with_pool: bool = True):
+        logging.info("Initializing Clickhouse client")
         env = Env()
         env.read_env(".env")
         pool = None
@@ -42,15 +45,12 @@ class DataRepository(metaclass=Singleton):
             if len(queries) == 0:
                 self.client.command(file)
             for query in queries:
-                if query == '':
+                if query.strip() == '' or query.strip().startswith('/*') or query.strip().startswith('--'):
                     continue
-                elif query.strip().startswith('/*') or query.strip().startswith('--'):
-                    continue
-
+                logging.info(f"Executing query: {query}")
                 self.client.command(query)
-
-    def __del__ (self):
-        self.client.close()
+        
+        logging.info("Clickhouse client initialized")
 
     def list_symbols(self) -> pd.DataFrame:
         return self.client.query_df('SELECT symbol FROM crypto_ohlcv GROUP BY symbol ORDER BY symbol')

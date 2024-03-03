@@ -6,12 +6,9 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            print("Creating instance")
             with cls._get_lock(cls):
                 if cls not in cls._instances:
                     cls._instances[cls] = super().__call__(*args, **kwargs)
-        else:
-            print("instance is created")
         return cls._instances[cls]
 
     @classmethod
