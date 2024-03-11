@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pipreqs --force --ignore tests,docs,examples,scripts,.venv,.git,.github,.vscode,.pytest_cache .
+pipreqs --use-local --ignore tests,docs,examples,scripts,.venv,.git,.github,.vscode,.pytest_cache --force
