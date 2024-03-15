@@ -10,6 +10,7 @@ from typing import Generator
 from requests.exceptions import HTTPError
 from abc import ABC, abstractmethod
 from frozendict import frozendict
+from enum import Enum
 
 @dataclass(frozen=True)
 class Resolution:
@@ -82,4 +83,14 @@ class BaseProvider(ABC):
     def get_data(self, symbol: str, start_date: date, end_date: date) -> Generator[pd.DataFrame, None, None]:
         pass
 
+class Providers(Enum):
+    BINANCE = 0
 
+class ProviderFactory():
+    @staticmethod
+    def get_provider(provider: Providers) -> BaseProvider:
+        if provider == Providers.BINANCE:
+            from bafrapy.data_provider.binance_provider import BinanceProvider
+            return BinanceProvider()
+        else:
+            raise ValueError(f'Provider {provider} not found')
