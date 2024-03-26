@@ -39,7 +39,7 @@ class DataRepository(metaclass=Singleton):
                                                     database=env("DB_DATABASE"),
                                                     pool_mgr=pool)
         
-        with open('bafrapy/repository/schema.sql', 'r') as f:
+        with open('bafrapy/repository/data_schema.sql', 'r') as f:
             file = f.read()
             queries = file.split(';')
             if len(queries) == 0:
