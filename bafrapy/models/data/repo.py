@@ -1,14 +1,16 @@
+from dataclasses import dataclass
+from datetime import date
+from typing import Iterator
+
 import pandas as pd
 import urllib3
-import logging
 
-from dataclasses import dataclass
-from bafrapy.libs.singleton import Singleton
-from clickhouse_connect import get_client, common
+from clickhouse_connect import get_client
 from clickhouse_connect.driver.client import Client
-from datetime import date
-from environs import Env
-from typing import Iterator
+from loguru import logger
+
+from bafrapy.env_reader.database import EnvReader
+from bafrapy.libs.singleton import Singleton
 
 
 @dataclass
@@ -26,20 +28,18 @@ class DataFields(metaclass=Singleton):
 class DataRepository(metaclass=Singleton):
     client: Client = None
 
-    def __init__(self, with_pool: bool = True):
-        logging.info("Initializing Clickhouse client")
-        env = Env()
-        env.read_env(".env")
+    def __init__(self, pool: bool = False):
+        logger.info("Initializing Clickhouse client")
         pool = None
-        if with_pool:
+        if pool:
             pool = urllib3.PoolManager(num_pools=8, maxsize=16, retries=3, timeout=urllib3.Timeout(connect=2.0, read=5.0))
         self.client = get_client(host='localhost',
-                                                    username=env("DB_USER"),
-                                                    password=env("DB_PASSWORD"),
-                                                    database=env("DB_DATABASE"),
-                                                    pool_mgr=pool)
+                                username=EnvReader().CH_USER,
+                                password=EnvReader().CH_PASSWORD,
+                                database=EnvReader().CH_DATABASE,
+                                pool_mgr=pool)
         
-        with open('bafrapy/repository/data_schema.sql', 'r') as f:
+        with open('./bafrapy/models/data/ch_schema.sql', 'r') as f:
             file = f.read()
             queries = file.split(';')
             if len(queries) == 0:
@@ -47,10 +47,10 @@ class DataRepository(metaclass=Singleton):
             for query in queries:
                 if query.strip() == '' or query.strip().startswith('/*') or query.strip().startswith('--'):
                     continue
-                logging.info(f"Executing query: {query}")
+                logger.debug(f"Running query: {query}")
                 self.client.command(query)
         
-        logging.info("Clickhouse client initialized")
+        logger.info("Clickhouse client initialized")
 
     def list_symbols(self) -> pd.DataFrame:
         return self.client.query_df('SELECT symbol FROM crypto_ohlcv GROUP BY symbol ORDER BY symbol')
@@ -77,8 +77,6 @@ class DataRepository(metaclass=Singleton):
             })
 
     def get_gap_days(self, symbol: str, resolution: int, start: date, end: date) -> pd.DataFrame:
-        print(start, end)
-        print(type(start), type(end))
         return self.client.query_df('''
                                     SELECT toDate({start:Date}) + number AS fecha
                                     FROM numbers(toUInt64(dateDiff('day', toDate({start:Date}), toDate({end:Date})))+1)

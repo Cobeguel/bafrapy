@@ -1,6 +1,7 @@
 
 CREATE TABLE IF NOT EXISTS crypto_ohlcv (
     time Datetime NOT NULL,
+    provider String NOT NULL,
     symbol String NOT NULL,
     resolution UInt64 NOT NULL,
     open Decimal(18,8) NOT NULL,
@@ -10,7 +11,7 @@ CREATE TABLE IF NOT EXISTS crypto_ohlcv (
     volume Decimal(18,8) NOT NULL,
     state Enum8('ORIGINAL', 'GAP') NOT NULL,
 )
-ENGINE = ReplacingMergeTree()
-PARTITION BY (symbol)
-ORDER BY (time, symbol, resolution)
-PRIMARY KEY (time, symbol, resolution);
+ENGINE = ReplacingMergeTree(version)
+PARTITION BY (provider, symbol)
+ORDER BY (provider, symbol, time, resolution)
+PRIMARY KEY (provider, symbol, time, resolution);
