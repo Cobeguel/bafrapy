@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from streamlit import sidebar, page_link, divider
+
+import streamlit as st
 
 class ClassPropertyDescriptor:
     def __init__(self, fget):
@@ -16,6 +19,19 @@ class BasePage(ABC):
     def PageName(cls) -> str:
         pass
 
+    def menu(self):
+        with sidebar:
+            page_link("pages/dashboard.py", label="Dashboard")
+            page_link("pages/data.py", label="Data")
+            page_link("pages/download.py", label="Download")
+
+            divider()
+
+    def render(self):
+        self.menu()
+        self.content()
+
+
     @abstractmethod
-    def render(self) -> str:
+    def content(self):
         pass
