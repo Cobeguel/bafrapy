@@ -65,6 +65,15 @@ class DataRepository(metaclass=Singleton):
     def list_resolutions(self, symbol: str) -> pd.DataFrame:
         return self.client.query_df('SELECT resolution FROM crypto_ohlcv WHERE  symbol={symbol:String} GROUP BY resolution ORDER BY resolution',
                                     parameters={'symbol': symbol})
+    
+    def overview(self) -> pd.DataFrame:
+        q = """
+        SELECT toStartOfYear(time) AS month, provider, symbol, count(*) as count
+        FROM crypto_ohlcv
+        GROUP BY month, provider, symbol
+        ORDER BY provider, month,symbol
+        """
+        return self.client.query_df(q)
 
     def get_by_range(self, symbol: str, resolution: int, start: date, end: date) -> pd.DataFrame:
         return self.client.query_df(
