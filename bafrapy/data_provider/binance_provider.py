@@ -86,7 +86,7 @@ class BinanceProvider(BaseProvider):
 
         return months
 
-    def get_data_availability(self, symbol: str) -> Tuple[datetime, datetime]:
+    def availability(self, symbol: str) -> Tuple[datetime, datetime]:
         first_date = self.get_first_available_date(symbol)
         last_date = (datetime.now() - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         return (first_date, last_date)
@@ -95,7 +95,7 @@ class BinanceProvider(BaseProvider):
         if start_date.year == end_date.year:
             end_date.replace(month=12)
 
-        availability = self.get_data_availability(symbol)
+        availability = self.availability(symbol)
         if start_date.year == availability[0].year:
             start_date = availability[0]
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 from datetime import date
 from dataclasses import dataclass, field
-from typing import Generator
+from typing import Generator, Tuple
 from requests.exceptions import HTTPError
 from abc import ABC, abstractmethod
 from frozendict import frozendict
@@ -77,6 +77,10 @@ class BaseProvider(ABC):
 
     @abstractmethod
     def get_first_available_date(self, symbol: str) -> date:
+        pass
+
+    @abstractmethod
+    def availability(self, symbol) -> Tuple[date, date]:
         pass
 
     @abstractmethod
