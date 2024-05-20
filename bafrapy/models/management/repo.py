@@ -6,7 +6,6 @@ from typing import Generic, List, TypeVar
 from loguru import logger
 from peewee import *
 from peewee import DoesNotExist, Model
-from playhouse.pool import PooledMySQLDatabase
 
 from bafrapy.env_reader.database import EnvReader
 from bafrapy.libs.singleton import Singleton
@@ -51,19 +50,18 @@ class GenericRepository(Generic[T]):
             return self.model.select().where(**filters).order_by(self.model.id)
         else:
             return self.model.select()
+            
 
 @dataclass
 class ManagementRepository(metaclass=Singleton):
-    db: PooledMySQLDatabase = field(default=None, init=False)
+    db: MySQLDatabase = field(default=None, init=False)
     providers: GenericRepository = field(default=GenericRepository(Provider), init=False)
     resolutions: GenericRepository = field(default=GenericRepository(Resolution), init=False)
     
     def __post_init__(self):
         logger.info("Initializing Mysql client")
-        self.db = PooledMySQLDatabase(
+        self.db = MySQLDatabase(
             database=EnvReader().MYSQL_DATABASE,
-            max_connections=8,
-            stale_timeout=300,
             user=EnvReader().MYSQL_USER,
             password=EnvReader().MYSQL_PASSWORD,
             host='localhost',
@@ -72,6 +70,7 @@ class ManagementRepository(metaclass=Singleton):
         self.db.connect()
         BaseModel._meta.database.initialize(self.db)
         logger.info("Mysql client initialized")
+        self.init_repo()        
 
     def __del__(self):
         self.db.close()
