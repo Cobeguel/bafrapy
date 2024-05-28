@@ -2,110 +2,630 @@ import pandas as pd
 import numpy as np
 
 from enum import Enum
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field, InitVar
-from datetime import datetime, date
-from queue import PriorityQueue
-from typing import Iterator, TypeVar, Generic, List, Dict
-from bafrapy.repository.data_repo import DataRepository
+from datetime import datetime
+from typing import List, Dict
+from abc import ABC
+
+from bafrapy.backtest.dataset import DataSet, OHLCV
 
 
-T = TypeVar('T')
+from loguru import logger
 
-def set_context(precision: int):
-    getcontext().prec = precision
 
-@dataclass
-class PeekIterator(Generic[T]):
-    iterator: Iterator[T]
-    next_element: T = field(default=None)
+class Side(Enum):
+    """
+    Enum to represent the side of an order.
+    """
+    buy = 1    #: Represents a long order.
+    sell = 2   #: Represents a short order.
 
-    def __post_init__(self):
-        self.next_element = next(self.iterator, None)
-
-    def peek(self) -> T:
-        return self.next_element
-
-    def __iter__(self) -> 'PeekIterator':
-        return self
-
-    def __next__(self) -> T:
-        if self.next_element is None:
-            raise StopIteration
-        current_element = self.next_element
-        self.next_element = next(self.iterator, None)
-        return current_element
-
-@dataclass
-class OHLCV:
-    timestamp: datetime
-    open: Decimal
-    high: Decimal
-    low: Decimal
-    close: Decimal
-    volume: Decimal
-    custom: dict = field(default_factory=dict)
-
-@dataclass
-class DataSet:
-    asset: str
-    resolution: int
-    start_date: date
-    end_date: date
-    stream: Iterator[pd.DataFrame] = field(default=None, init=False)
-    data_chunk: pd.DataFrame = field(default=None, init=False)
-    chunk_iterator: Iterator[pd.DataFrame] = field(default=None, init=False)
-    conn: DataRepository = field(default_factory=DataRepository, init=False)
-    current_data: dict = field(default=None, init=False)
-
-    def _initialize(self):
-        self.stream = self.conn.get_data_stream(self.asset, self.resolution, self.start_date, self.end_date)
-        self.data_chunk = next(self.stream, None)
-        if self.data_chunk is None:
-            raise ValueError("No data for the specified range")
-        self.chunk_iterator = self.data_chunk.itertuples()
-
-    def __post_init__(self):
-        self._initialize()
-
-    def get_current_data(self) -> OHLCV:
-        return self.current_data
-
-    def get_current_field(self, field: str) -> any: # Deprecate
-        return self.current_data[field]
+class Pair(Enum):
+    """
+    Enum to represent the pair of a trade of the form A/B.
+    """
+    base = 1    #: Represent the base instrument as A in the pair A/B.
+    quote = 2   #: Represent the quote instrument as B in the pair A/B.
     
-    def process_row(self, row: pd.Series) -> OHLCV:
-        timestamp = None
-        if isinstance(row[0], pd.Timestamp):
-            timestamp = row[0].to_pydatetime()
-        elif isinstance(row[0], (int, float)):
-            timestamp = datetime.fromtimestamp(row[0])
+
+class OrderType(Enum):
+    """
+    Enum to represent the type of an order.
+    """
+    market = 1      #: Represents a market order.
+    limit = 2       #: Represents a limit order. 
+    stop_limit = 3  #: Represents a stop limit order.
+
+
+class OrderState(Enum):
+    """
+    Enum to represent the state of an order.
+    """
+    open = 1            #: Represents an open order.
+    executed = 2        #: Represents an executed order. An executed irder generate a trade.
+    canceled = 3        #: Represents a canceled order.
+    partial_filled = 4  #: Represents a partially filled order.
+
+
+@dataclass
+class Order(ABC):
+    """
+    Class to represent an order in the trading system.
+    """
+
+    #: Id of the order
+    order_id: int
+
+    #: Side of the order
+    side: Side
+
+    #: Creation time in backtest context. It refers to the time within the related candle.
+    create_time: datetime
+
+    #: Time when the order was executed. Usually is related to an open candle datetime.
+    executed_time: datetime = field(default=None, init=False)
+
+    #: Time when the order was canceled.
+    cancel_time: datetime = field(default=None, init=False)
+
+    #: State of the order.
+    state: OrderState = field(default=OrderState.open, init=False)
+
+    def cancel(self, time: datetime) -> bool:
+        """
+        Cancel an order.
+
+        Args:
+            time (datetime): Time when the order is canceled.
+
+        Returns:
+            bool: True if the order was canceled, False otherwise.
+        """
+        if self.state == OrderState.open:
+            self.state = OrderState.canceled
+            self.cancel_time = time
+            return True
+        return False
+    
+    def is_open(self):
+        """
+        Indicates whether the order is currently open.
+        """
+        return self.state == OrderState.open
+
+    def is_executed(self):
+        """
+        Indicates whether the order is currently executed.
+        """
+        return self.state == OrderState.executed and self.executed_time is not None
+
+    def is_canceled(self):
+        """
+        Indicates whether the order is currently canceled.
+        """
+        return self.state == OrderState.canceled
+
+    
+    def execute(self, price: Decimal, time: datetime) -> 'Trade':
+        """
+        Execute an order. The order must be in an open state to be executed.
+        The way the order is executed depends on the type of the order.
+
+        Args:
+            price (Decimal): Price of the order.
+            time (datetime): Time when the order is executed.
+
+        Returns:
+            Trade: Trade generated by the order. If the order is not executed, None is returned.
+        """
+        if self.state is not OrderState.open:
+            raise ValueError("an order must be open to be executed")
+         
+        trade = self.process(price, time)
+        if trade is not None:
+            self.state = OrderState.executed
+            self.executed_time = time
+        return trade
+
+    @abstractmethod
+    def process(self, current_price: Decimal, current_time: datetime) -> 'Trade':
+        """
+        Process the order. This method must be implemented by the subclasses.
+
+        Args:
+            current_price (Decimal): Current price of the instrument.
+            current_time (datetime): Current time.
+
+        Returns:
+            Trade: Trade generated by the order.
+        """
+        pass
+
+
+@dataclass
+class MarketOrder(Order):
+    """
+    Class to represent a market order.
+    """
+
+    #: Amount of units. If buy, quote, if sell, base.
+    quantity: Decimal
+
+    def __post_init__(self):
+        if self.quantity <= 0:    
+            raise ValueError("ammount to buy/sell must be greater than 0")
+        
+        logger.debug(f"market order {self.order_id} created: {self.create_time}")
+        
+    def process(self, current_price: Decimal, current_time: datetime) -> 'Trade':
+        """
+        Implement the process method for a market order. A market order is executed at the current price.
+        For more information about the method, see the Order class.
+        """
+        self.state = OrderState.executed
+        self.executed_time = current_time
+        return Trade(self, self.quantity, current_price, current_time)
+
+
+@dataclass
+class MarketOrderQuote(Order):
+    quantity: Decimal
+
+    def __post_init__(self):
+        if self.quantity <= 0:
+            raise ValueError("order cannot be set with negative currency")
+        
+        logger.debug(f"market order {self.order_id} created: {self.create_time}")
+        
+    def process(self, current_price: Decimal, current_time: datetime) -> 'Trade':
+        self.state = OrderState.executed
+        self.executed_time = current_time
+        return Trade(self, self.quantity/current_price, current_price, current_time)
+
+@dataclass
+class LimitOrder(Order):
+    """
+    Class to represent a limit order.
+    """
+
+    #: Quantity of units.
+    quantity: Decimal
+
+    #: Price required to execute the order.
+    price: Decimal = field(default=Decimal(0)) # 0 means market order
+    
+    # position_target: int = field(default=0) # if apply to a current opened position
+    take_profit: Decimal = Decimal(0)
+    stop_loss: Decimal = Decimal(0)
+
+    def __post_init__(self):
+       if self.price < 0:
+            raise ValueError("price cannot be negative")
+       
+       logger.debug(f"limit order {self.order_id} created: {self.create_time}")
+
+
+    @property
+    def required_money(self) -> Decimal:
+        """
+        Calculate the required money to execute the order.
+        """
+        return self.quantity * self.price
+
+    def process(self, current_price: Decimal, current_time: datetime) -> 'Trade':
+        """
+        Implement the process method for a limit order. A limit order is executed when the current price
+        is equal or better than the price of the order. For more information about the method, see the Order class.
+        """
+
+        if (self.side == Side.buy and current_price <= self.price) or (self.side == Side.sell and current_price >= self.price):
+            self.state = OrderState.executed
+            self.executed_time = current_time
+            return Trade(self, self.quantity, current_price, current_time)
+        return None
+        
+
+@dataclass
+class Trade:
+    """
+    Class to represent a trade in the trading system.
+    """
+    order: Order
+    quantity: Decimal
+    executed_price: Decimal
+    executed_time: datetime
+
+    def __post_init__(self):
+        if self.order.state != OrderState.executed:
+            raise ValueError("order must be executed")
+        if isinstance(self.order, MarketOrder) and self.order.quantity < 0:
+                raise ValueError("price cannot be negative")
+            
+        logger.debug(f"Trade created: {self.executed_time}")
+
+    @property        
+    def side(self) -> Side:
+        """
+        Get the side of the trade based on the side of the order.
+        """
+        return self.order.side
+
+
+class PositionState(Enum):
+    """
+    Enum to represent the state of a position.
+    """
+    open = 1
+    closed = 2
+
+
+@dataclass
+class Position:
+    """
+    Class to represent a position in the trading system.
+    """
+    #: Id of the position
+    position_id: int
+
+    #: To create a position a trade must be passed.
+    initial_trade: InitVar[Trade]
+
+    #: Amount of units. If buy, quote, if sell, base.
+    quantity: Decimal = field(default=Decimal(0), init=False)
+
+    #: Amount of units reserved for orders. Usually is related to the contrapart side of the position.
+    reserved_quantity: Decimal = field(default=Decimal(0), init=False)
+
+    #: State of the position
+    state: PositionState = field(default=PositionState.open, init=False)
+
+    #: Side of the position
+    side: Side = field(default=None, init=False)
+
+    #: List of pending orders related to the position.
+    orders: List[Order] = field(default_factory=list, init=False)
+
+    #: List of trades related to executed order of the position.
+    trades: List[Trade] = field(default_factory=list, init=False)
+
+    def __post_init__(self, init_trade: Trade):
+        """
+        Post-initialization to set up the position based on the initial trade.
+
+        Args:
+            initial_trade (Trade): The initial trade used to create the position.
+        """
+        if init_trade is None:
+            raise ValueError("initial_order is required")
+        
+        self.trades.append(init_trade)
+        self.quantity += init_trade.quantity
+        self.side = init_trade.order.side
+        logger.debug(f"Position created with trade made by order {init_trade.order.order_id} at {init_trade.executed_time}")
+        
+    # def close_position(self):
+    #    if len(self.orders) > 0:
+    #        raise ValueError(f"attempt to close position with {len(self.orders)} open orders")
+    #    if self.state == PositionState.closed:
+    #        raise ValueError("cannot close a closed position")
+    #    if self.quantity != 0:
+    #        raise ValueError("cannot close a position with 0 quantity")
+    #    self.state = PositionState.closed
+    #    return None
+    #
+    # @property
+    # def side(self) -> Side:
+    #    if len(self.trades) == 0:
+    #        raise ValueError("position has no trades")
+    #    return self.trades[0].order.side
+
+
+    def is_closed(self) -> bool:
+        """
+        Indicates whether the position is currently open.
+
+        Returns:
+            bool: True if the position is open, False otherwise.
+        """
+        return self.state == PositionState.closed
+
+    def _is_side_reverse(self, side: Side) -> bool:
+        """
+        Indicates whether the side is reversed from the position side.
+
+        Args:
+            side (Side): Side to check.
+
+        Returns:
+            bool: True if the side is reversed, False otherwise.
+        """
+        return self.side != side 
+    
+    def _check_close_position(self) -> bool:
+        """
+        Check if the position must be closed and close it if necessary.
+        """
+        if self.quantity == 0 and len(self.pending_orders()) == 0 and self.state != PositionState.closed:
+            self.state = PositionState.closed
+            return True
+        return False
+    
+    def add_order(self, order: Order):
+        """
+        Add a pending order to the position. The order must be open.
+        """
+        if order.state != OrderState.open:
+            raise ValueError("order must be open")        
+        if order.order_id in [id for id in self.orders]:
+            raise ValueError(f"order with {id} already exists in position {self.position_id}")
+        self.orders.append(order)
+        if self._is_side_reverse(order.side):
+            self.reserved_quantity += order.quantity
+
+    def notify_trade(self, trade: Trade):
+        if trade.order not in self.orders:
+            raise ValueError("trade not related to position")
+        self.trades.append(trade)
+        if self._is_side_reverse(trade.side):
+            self.reserved_quantity -= trade.quantity
+            self.quantity -= trade.quantity
         else:
-            timestamp = row[0]
-        return OHLCV(
-            timestamp=timestamp,
-            open=Decimal(row[1]),
-            high=Decimal(row[2]),
-            low=Decimal(row[3]),
-            close=Decimal(row[4]),
-            volume=Decimal(row[5]),
-            custom={row._fields[i]: getattr(row, row._fields[i]) for i in range(6, len(row._fields))}
-        )
+            self.quantity += trade.quantity
+        
+        self._check_close_position()
+
+        #if order.state != OrderState.executed:
+        #    raise ValueError("order must be executed")
+        #self.quantity += order.quantity
+        #if self.quantity < 0:
+        #    raise ValueError("quantity cannot be negative")
+        #if self.quantity == 0:
+        #    self.state = PositionState.closed
+        #self.orders.append(order)
+
+    def pending_orders(self) -> List[Order]:
+        """
+        Get the pending orders related to the position.
+
+        Returns:
+            List[Order]: List of pending orders.
+        """
+        return [order for order in self.orders if order.state == OrderState.open]
+    
+    def active_orders(self) -> List[Order]:
+        """
+        Get the active orders related to the position.
+
+        Returns:
+            List[Order]: List of active orders.
+        """
+        return [order for order in self.orders if order.state == OrderState.open]
+
+    def get_trades(self) -> List[Trade]:
+        """
+        Get the trades related to the position.
+
+        Returns:
+            List[Trade]: List of trades.
+        """
+        return self.trades
+
+    def get_average_price(self) -> Decimal:
+        """
+        Get the average price of the position.
+
+        Returns:
+            Decimal: Average price of the position.
+        """
+        self.get_trades()
+        if len(self.get_trades()) == 0:
+            raise ValueError("no trades")
+
+        return sum([trade.executed_price for trade in self.get_trades()]) / len(self.get_trades())
+
+
+@dataclass
+class VBrokerConfig:
+    initial_money: Decimal = Decimal(0)
+    initial_quote: Decimal = Decimal(0)
+    fee: Decimal = Decimal(0)
+    data: DataSet = None
+
+@dataclass
+class VBroker:
+    """
+    Class to represent a broker in the trading system.
+    """
+    config: InitVar[VBrokerConfig]
+
+    #: Money available in the broker.
+    money: Decimal = field(default=Decimal(0), init=False)
+
+    #: Quote available in the broker.
+    quote: Decimal = field(default=Decimal(0), init=False)
+
+    #: Fee to be applied to the broker.
+    fee: Decimal = field(default=Decimal(0), init=False)
+
+    #: List of all the orders in the broker.
+    orders : List[Order] = field(default_factory=list, init=False)
+
+    #: List of all the trades in the broker. Is a subset of the orders.
+    pending_orders: Dict[int, Order] = field(default_factory=dict, init=False)
+    
+    #closed_orders: Dict[int, Order] = field(default_factory=dict, init=False)
+
+    #: List of all trades as result of executed orders.
+    trades: List[Trade] = field(default_factory=list, init=False)
+
+    #: List of all the positions in the broker.
+    open_positions: Dict[int, Position] = field(default_factory=dict, init=False)
+
+    #: List of all the closed positions in the broker.
+    closed_positions: Dict[int, Position] = field(default_factory=list, init=False)
+    
+    #: Historical dataset used to backtest.
+    _data: DataSet = field(default=None, init=False)
+
+    #: Current data in the broker.
+    _current_data: OHLCV = field(default=None, init=False)
+
+    #: Last order id used to create a new order.
+    _last_order_id: int = field(default=0, init=False)
+
+    #: Last trade id used to create a new trade.
+    _last_trade_id: int = field(default=0, init=False)
+
+    #: Last position id used to create a new position.
+    _last_position_id: int = field(default=0, init=False)
+
+
+    def __post_init__(self, config: VBrokerConfig):
+        self._data = config.data
+        self.money = config.initial_money
+        self.quote = config.initial_quote
+        self.fee = config.fee
+        self._next_data()
+        
+    def _next_data(self) -> OHLCV:
+        if self._data is None:
+            raise ValueError("data is not set")
+        self._current_data = self._data.next_data()
+
+    def set_commision(self, commission: Decimal):
+        if commission < 0:
+            raise ValueError("broker commissions cannot be negative")
+        
+    def set_dataset(self, data: DataSet):
+        self._data = data
+        self._next_data()
 
     def next_data(self) -> OHLCV:
-        self.current_data = next(self.chunk_iterator, None)
-        if self.current_data is None:
-            print("Siguiente chunk")
-            self.data_chunk = next(self.stream, None)
-            if self.data_chunk is not None:
-                self.chunk_iterator = self.data_chunk.itertuples()
-                return self.next_data()
-            else:
-                return None
-        return self.process_row(self.current_data)
+        self._next_data()
+        self._process_orders()
+        return self._current_data
+    
+    def current_data(self) -> OHLCV:
+        return self._current_data
+
+    def _process_order(self, order: Order, price: Decimal, time: datetime):
+        trade = order.execute(self._current_data.close, self._current_data.timestamp)
+        if self.open_position is None:
+            self.open_position = Position(trade)
+        else:
+            self.open_position.add_order(trade)
+        self.closed_orders[order.order_id] = self.open_orders.pop(order.order_id)
+        self.trades.append(trade)
+        # self.open_orders.remove(order)
+    
+    def _process_orders(self):
+        logger.debug(f"number of orders to process: {len(self.open_orders)}")
+        for order in list(self.open_orders.values()):
+            logger.debug(f"order to process: {type(order)}")
+            if order.state != OrderState.open:
+                raise ValueError(f"order {order.order_id} is not open")
+
+            if isinstance(order, MarketOrder):
+                logger.debug(f"process market order: {order.order_id} - {order.side}")
+                self._process_order(order, self._current_data.close, self._current_data.timestamp)
+
+            elif isinstance(order, LimitOrder):
+                logger.debug(f"process limit order: {order.order_id} - {order.side}")
+                if order.price >= self._current_data.low and order.price <= self._current_data.high:
+                    self._process_order(order, order.price, self._current_data.timestamp)
+                   
+
+    def set_money(self, money: float):
+        if money < 0:
+            raise ValueError("broker cannot be set with negative money")
+
+        self.money = money
+    
+    def add_money(self, money: float):
+        self.money += Decimal(money)
+
+    def add_order(self, order: Order, position_id: int = 0):
+        if order.order_id in self.open_orders:
+            raise ValueError("order_id already exists")
+        print(type(self.open_orders))
+        self.open_orders[order.order_id]=order
+
+    def cancel_order(self, order_id: str) -> bool:
+        if order_id not in self.open_orders:
+            return False
+
+    def create_order(self,
+                    side: Side,
+                    type: OrderType,
+                    quantity: Decimal,
+                    price: Decimal = 0,
+                    take_profit: Decimal = 0,
+                    stop_loss: Decimal = 0) -> OrderState:
+        self._last_order_id += 1
+        return self.__add_order(Order(self._last_order_id, side, type, quantity, price, take_profit, stop_loss))
+
+
+@dataclass
+class Stats:
+    num_orders : int = field(default=0)
+    num_positions : int = field(default=0)
+    num_closed_positions : int = field(default=0)
+    num_canceled_orders : int = field(default=0)
+    num_executed_orders : int = field(default=0)
+    num_open_orders : int = field(default=0)
+
+@dataclass
+class Strategy(metaclass=ABCMeta):
+    data : DataSet
+    broker_config = InitVar[VBrokerConfig]
+    broker: VBroker = field(default=None, init=False)
+
+    def __post_init__(self):
+        if self.data is None:
+            raise ValueError("data is required")
+        if self.data.has_data() == False:
+            raise ValueError("data is empty")
+        self.broker = VBroker(data=self.data, config=self.broker_config)  
+
+    def next_data(self):
+        self.broker.next_data()
+        self.on_next_data()
+    
+    @abstractmethod
+    def on_next_data(self):
+        pass
+
+    @abstractmethod
+    def initialize(self):
+        pass
+
+    def buy(self, type: OrderType, quantity: Decimal, price: Decimal = 0, take_profit: Decimal = 0, stop_loss: Decimal = 0) -> Order:
+        return self.broker.create_order(Side.long, type, quantity, price, take_profit, stop_loss)
+    
+    def sell(self, type: OrderType, quantity: Decimal, price: Decimal = 0, take_profit: Decimal = 0, stop_loss: Decimal = 0) -> Order:
+        return self.broker.create_order(Side.short, type, quantity, price, take_profit, stop_loss)
+
+    def get_open_orders(self) -> List[Order]:
+        return self.broker.open_orders
+    
+    def get_open_order_by_id(self, order_id: int) -> Order:
+        return self.broker.open_orders[order_id]
+    
+    def get_open_positions(self) -> List[Position]:
+        return self.broker.open_positions
+    
     
 
-    def is_active(self) -> bool:
-        return self.stream is not None and (self.data_chunk is not None or self.current_data is not None)
+@dataclass
+class Backtest:
+    Strategy: Strategy
+
+    #def __post_init__(self):
+    #     self.vbroker = VBroker(data=self.dataset)
+    #     self.Strategy.initialize_broker(self.vbroker)
+
+    def start_backtesting(self):
+        self.Strategy.next_data()
 
