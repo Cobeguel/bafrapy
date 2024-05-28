@@ -1,12 +1,15 @@
-import requests
 import io
 import zipfile
-import pandas as pd
+import zlib
 
-from decimal import Decimal
-from datetime import datetime, date, timedelta
-from typing import Generator, List, Tuple
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from typing import Generator, List, Tuple
+
+import pandas as pd
+import requests
+
 from bafrapy.data_provider.base_provider import BaseProvider
 
 
@@ -109,22 +112,46 @@ class BinanceProvider(BaseProvider):
             reqs.append(requests.Request('GET', self._build_data_url(symbol, '1s', date, monthly=True)))
 
         for req in reqs:
-            yield self._request_data(req)
+            yield from self._request_data(req)
 
         return None
 
-    def _handle_response(self, response: requests.Response) -> pd.DataFrame:
-        zip_bytes = io.BytesIO(response.content)
-        with zipfile.ZipFile(zip_bytes) as zf:
-            csv_file_name = zf.namelist()[0]
-            with zf.open(csv_file_name) as csv_bytes:
-                df = pd.read_csv(csv_bytes, header=None, dtype=str)
-                df = df.iloc[:, :6]
-                df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
-                df[['open', 'high', 'low', 'close', 'volume']] = df[['open', 'high', 'low', 'close', 'volume']].applymap(lambda x: Decimal(x))
-                df['time'] = pd.to_datetime(df['time'].astype(int), unit='ms')
-                df['resolution'] = 1
-        return df
+    def _handle_response(self, response: requests.Response) -> Generator[pd.DataFrame, None, None]:
+        try:
+            zip_bytes = io.BytesIO(response.content)
+            with zipfile.ZipFile(zip_bytes) as zf:
+                csv_file_name = zf.namelist()[0]
+                with zf.open(csv_file_name) as csv_file:
+                    with io.TextIOWrapper(csv_file, encoding='utf-8') as text_file:
+                        chunk_size = 10**6 
+                        lines = []
+                        for line in text_file:
+                            lines.append(line)
+                            if len(lines) >= chunk_size:
+                                df_chunk = pd.read_csv(io.StringIO(''.join(lines)), header=None, dtype=str)
+                                df_chunk = df_chunk.iloc[:, :6]
+                                df_chunk.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
+                                df_chunk[['open', 'high', 'low', 'close', 'volume']] = df_chunk[['open', 'high', 'low', 'close', 'volume']].applymap(lambda x: Decimal(x))
+                                df_chunk['time'] = pd.to_datetime(df_chunk['time'].astype(int), unit='ms')
+                                df_chunk['resolution'] = 1
+
+                                yield df_chunk
+                                lines = []
+
+                        if lines:
+                            df_chunk = pd.read_csv(io.StringIO(''.join(lines)), header=None, dtype=str)
+                            
+                            if len(df_chunk.columns) >= 6:
+                                df_chunk = df_chunk.iloc[:, :6]
+                                df_chunk.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
+                                df_chunk[['open', 'high', 'low', 'close', 'volume']] = df_chunk[['open', 'high', 'low', 'close', 'volume']].applymap(lambda x: Decimal(x))
+                                df_chunk['time'] = pd.to_datetime(df_chunk['time'].astype(int), unit='ms')
+                                df_chunk['resolution'] = 1
+
+                                yield df_chunk
+
+        except zipfile.BadZipFile:
+            raise ValueError("File is not a valid ZIP file or is corrupted")
 
     def get_data_resolutions(self, symbol: str = "") -> List[str]:
         pass

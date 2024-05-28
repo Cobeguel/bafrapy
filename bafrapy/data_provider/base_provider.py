@@ -1,16 +1,17 @@
-import pandas as pd
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from datetime import date
+from enum import Enum
+from typing import Dict, Generator, List, Tuple
+
 import backoff
+import pandas as pd
 import requests
 
-from dataclasses import dataclass
-from typing import Dict, List
-from datetime import date
-from dataclasses import dataclass, field
-from typing import Generator, Tuple
-from requests.exceptions import HTTPError
-from abc import ABC, abstractmethod
 from frozendict import frozendict
-from enum import Enum
+from loguru import logger
+from requests.exceptions import HTTPError
+
 
 @dataclass(frozen=True)
 class Resolution:
@@ -56,16 +57,17 @@ _give_up = lambda e: e.response is not None and 500 <= e.response.status_code < 
 class BaseProvider(ABC):
 
     @abstractmethod
-    def _handle_response(self, response: requests.Response) -> pd.DataFrame:
+    def _handle_response(self, response: requests.Response) -> Generator[pd.DataFrame, None, None]:
         pass
 
     @backoff.on_exception(backoff.expo, HTTPError, max_tries=4, giveup=_give_up)
-    def _request_data(self, req: requests.Request) -> pd.DataFrame:
+    def _request_data(self, req: requests.Request) -> Generator[pd.DataFrame, None, None]:
         with requests.Session() as session:
             prepared_req = session.prepare_request(req)
+            logger.debug(f"Requesting {prepared_req.url}")
             response = session.send(prepared_req, timeout=300)
             response.raise_for_status()
-            return self._handle_response(response)
+            yield from self._handle_response(response)
 
     @abstractmethod
     def list_available_symbols(self) -> List[str]:
