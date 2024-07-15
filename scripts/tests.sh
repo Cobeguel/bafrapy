@@ -2,4 +2,4 @@
 
 set -e
 
-python3 -m unittest discover -s tests -p '*_test.py'
+python3 -m unittest discover -s tests -p '*_test.py' -f
