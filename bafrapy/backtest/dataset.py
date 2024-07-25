@@ -47,6 +47,13 @@ class OHLCV:
     volume: Decimal
     custom: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        self.open = Decimal(self.open)
+        self.high = Decimal(self.high)
+        self.low = Decimal(self.low)
+        self.close = Decimal(self.close)
+        self.volume = Decimal(self.volume)     
+
 @dataclass
 class DataSet(metaclass=ABCMeta):
     resolution: int
