@@ -1,23 +1,76 @@
 
 services:
-  database:
+  clickhouse:
     container_name: bafrapy_clickhouse
     image: clickhouse/clickhouse-server:23.9.5-alpine
-    ports:
-      - 8123:8123
-      - 9000:9000
-    volumes:
-      - ./clickhouse/config.xml:/etc/clickhouse-server/config.xml
-      - ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
-      - ./clickhouse/keys:/etc/clickhouse-server/keys
-      - ./clickhouse/log:/var/log/clickhouse-server
-      - ./clickhouse/data:/var/lib/clickhouse
     environment:
-      - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config.xml
-      - CLICKHOUSE_LOG=/var/log/clickhouse-server/clickhouse-server.log
-      - CLICKHOUSE_USER=${DB_USER}
-      - CLICKHOUSE_PASSWORD=${DB_PASSWORD}
-      - CLICKHOUSE_DB=${DB_DATABASE}
+      - CLICKHOUSE_USER=${CH_USER}
+      - CLICKHOUSE_PASSWORD=${CH_PASSWORD}
+      - CLICKHOUSE_DB=${CH_DATABASE}
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-log:/var/log/clickhouse-server
+      - clickhouse-config:/etc/clickhouse-server
+    ports:
+      - ${CH_HTTP_EXTERNAL_PORT}:${CH_HTTP_PORT}
+      - ${CH_NATIVE_EXTERNAL_PORT}:${CH_NATIVE_PORT}
+    networks:
+      - bafrapy-network
+
+  database:
+    image: mysql:8.4
+    container_name: bafrapy-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_DEFAULT_AUTH: caching_sha2_password 
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - bafrapy-network
+    ports:
+      - "${DB_EXTERNAL_PORT}:${DB_PORT}" 
+
+  directus:
+    image: directus/directus:11.3.5
+    container_name: bafrapy-directus
+    networks:
+      - bafrapy-network
+    ports:
+      - ${DIRECTUS_EXTERNAL_PORT}:${DIRECTUS_PORT}
+    volumes:
+      - ./uploads:/directus/uploads
+      - ./extensions:/directus/extensions
+      - ./templates:/directus/templates
+    depends_on:
+      - database
+
+    environment:
+      DB_CLIENT: mysql
+      DB_HOST: bafrapy-mysql
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+
+networks:
+  bafrapy-network:
+    name: bafrapy-network
+    driver: bridge
 
 volumes:
-  clickhouse:
+  mysql-data:
+    name: mysql-data
+
+  clickhouse-data:
+    name: clickhouse-data
+  clickhouse-config:
+    name: clickhouse-config
+  clickhouse-log:
+    name: clickhouse-log

@@ -1,5 +1,15 @@
 
-regenerate-env:
-	echo "DB_USER=username" > .env; \
-	echo "DB_PASSWORD=password" >> .env; \
-	echo "DB_DATABASE=default" >> .env; \
+serve:
+	docker compose up -d
+
+serve-down:
+	docker compose down
+
+phpmyadmin: 
+	docker compose -f docker-compose-dev.yml up -d
+
+phpmyadmin-down:
+	docker compose -f docker-compose-phpmyadmin.yml down
+
+ch-log-error:
+	docker exec -it bafrapy_clickhouse cat /var/log/clickhouse-server/clickhouse-server.err.log
