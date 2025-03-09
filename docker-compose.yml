@@ -12,6 +12,8 @@ services:
       - clickhouse-data:/var/lib/clickhouse
       - clickhouse-log:/var/log/clickhouse-server
       - clickhouse-config:/etc/clickhouse-server
+      - ./clickhouse-settings/custom-config.xml:/etc/clickhouse-server/config.d/custom-config.xml
+      - ./clickhouse-settings/custom-user.xml:/etc/clickhouse-server/users.d/custom-user.xml
     ports:
       - ${CH_HTTP_EXTERNAL_PORT}:${CH_HTTP_PORT}
       - ${CH_NATIVE_EXTERNAL_PORT}:${CH_NATIVE_PORT}

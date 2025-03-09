@@ -1,0 +1,4 @@
+<clickhouse>
+    <!-- 500 MB -->
+    <mark_cache_size>524288000</mark_cache_size> 
+</clickhouse>
