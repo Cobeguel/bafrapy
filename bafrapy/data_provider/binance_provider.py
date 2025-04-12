@@ -1,11 +1,10 @@
-import io
-import zipfile
-import zlib
-
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+import io
 from typing import Generator, List, Tuple
+import zipfile
+import zlib
 
 import pandas as pd
 import requests

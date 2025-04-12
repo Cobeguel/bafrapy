@@ -4,6 +4,7 @@ import streamlit as st
 
 from bafrapy.app import base
 
+
 @dataclass
 class DashboardPage(base.BasePage):
     def PageName(cls) -> str:

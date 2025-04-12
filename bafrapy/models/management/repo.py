@@ -1,6 +1,5 @@
-import json
-
 from dataclasses import dataclass, field
+import json
 from typing import Generic, List, TypeVar
 
 from loguru import logger

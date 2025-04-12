@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
-from bafrapy.models.management.base import BaseModel
-from peewee import *
 from uuid import uuid4
+
+from peewee import *
+
+from bafrapy.models.management.base import BaseModel
 
 
 class Provider(BaseModel):

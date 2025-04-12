@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Iterator
 
-import pandas as pd
-import urllib3
-
 from clickhouse_connect import get_client
 from clickhouse_connect.driver.client import Client
 from loguru import logger
+import pandas as pd
+import urllib3
 
 from bafrapy.env_reader.database import EnvReader
 from bafrapy.libs.singleton import Singleton

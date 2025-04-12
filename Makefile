@@ -13,3 +13,6 @@ phpmyadmin-down:
 
 ch-log-error:
 	docker exec -it bafrapy_clickhouse cat /var/log/clickhouse-server/clickhouse-server.err.log
+
+tidy:
+	isort bafrapy

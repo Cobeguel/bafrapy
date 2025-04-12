@@ -1,6 +1,7 @@
 from peewee import *
 from playhouse.shortcuts import ThreadSafeDatabaseMetadata
 
+
 class BaseModel(Model):
     class Meta:
         database = DatabaseProxy()

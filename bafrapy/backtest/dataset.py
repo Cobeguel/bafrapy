@@ -5,9 +5,8 @@ from datetime import date, datetime
 from decimal import Decimal, getcontext
 from typing import Generic, Iterator, TypeVar
 
-import pandas as pd
-
 from loguru import logger
+import pandas as pd
 
 from bafrapy.models.data.repo import DataRepository
 

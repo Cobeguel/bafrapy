@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from streamlit import sidebar, page_link, divider
 
+from streamlit import divider, page_link, sidebar
 import streamlit as st
+
 
 class ClassPropertyDescriptor:
     def __init__(self, fget):

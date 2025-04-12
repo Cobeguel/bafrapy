@@ -1,12 +1,12 @@
 from typing import List
 
-import streamlit as st
-
 from streamlit import cache_resource
+import streamlit as st
 
 from bafrapy.data_provider.binance_provider import BinanceProvider
 from bafrapy.models.data.repo import DataRepository
 from bafrapy.models.management.repo import ManagementRepository
+
 
 @cache_resource
 def data_repository() -> DataRepository:

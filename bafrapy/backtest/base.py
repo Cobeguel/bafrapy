@@ -1,21 +1,17 @@
-import pandas as pd
-import numpy as np
-
-from enum import Enum
-from decimal import Decimal
-from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass, field, InitVar
-from datetime import datetime
-from typing import List, Dict, OrderedDict, ClassVar
-from abc import ABC
-
+from abc import ABC, ABCMeta, abstractmethod
 from collections import OrderedDict
-
-from bafrapy.backtest.dataset import DataSet, OHLCV
-from bafrapy.backtest.exceptions import *
-
+from dataclasses import InitVar, dataclass, field
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from typing import ClassVar, Dict, List, OrderedDict
 
 from loguru import logger
+import numpy as np
+import pandas as pd
+
+from bafrapy.backtest.dataset import OHLCV, DataSet
+from bafrapy.backtest.exceptions import *
 
 
 class Side(Enum):

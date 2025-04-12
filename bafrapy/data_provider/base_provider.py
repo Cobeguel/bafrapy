@@ -5,11 +5,10 @@ from enum import Enum
 from typing import Dict, Generator, List, Tuple
 
 import backoff
-import pandas as pd
-import requests
-
 from frozendict import frozendict
 from loguru import logger
+import pandas as pd
+import requests
 from requests.exceptions import HTTPError
 
 
