@@ -16,5 +16,14 @@ phpmyadmin-down:
 ch-log-error:
 	docker exec -it bafrapy_clickhouse cat /var/log/clickhouse-server/clickhouse-server.err.log
 
+worker-dev:
+	echo DATA BACKTEST ASSETS| xargs -n1 -P3 -I{} bash -c 'rq worker {} --worker-class rq.SimpleWorker --url redis://localhost:6379/0'
+
+start-worker:
+	python bafrapy/worker_main.py $(QUEUE)
+
+local-env:
+	cp .env.example .env
+
 tidy:
 	isort bafrapy
