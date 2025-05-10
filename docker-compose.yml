@@ -60,6 +60,35 @@ services:
 
       ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
       ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+      ACCESS_TOKEN_TTL: 1d
+      API_TOKEN: ${API_TOKEN}
+      FLOWS_ENV_ALLOW_LIST: API_TOKEN
+
+  redis:
+    container_name: bafrapy-redis
+    image: redis:7.4.2
+    hostname: bafrapy-redis
+    restart:
+      unless-stopped
+    command: redis-server
+    volumes:
+      - redis-data:/data
+    ports:
+      - ${REDIS_PORT}:6379
+    networks:
+      - bafrapy-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2.2
+    ports:
+      - '8080:80'
+    networks:
+      - bafrapy-network
+    environment:
+      PMA_HOST: bafrapy-mysql
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASSWORD}
+      UPLOAD_LIMIT: 100M 
 
 networks:
   bafrapy-network:
@@ -69,6 +98,7 @@ networks:
 volumes:
   mysql-data:
     name: mysql-data
+    external: true
 
   clickhouse-data:
     name: clickhouse-data
@@ -76,3 +106,6 @@ volumes:
     name: clickhouse-config
   clickhouse-log:
     name: clickhouse-log
+
+  redis-data:
+    name: redis-data
