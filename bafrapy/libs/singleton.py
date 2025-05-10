@@ -1,9 +1,12 @@
 import threading
+from collections import defaultdict
+from typing import Any, DefaultDict
+from abc import ABCMeta
 
 
-class Singleton(type):
-    _instances = {}
-    _locks = {}
+class Singleton(ABCMeta):
+    _instances: DefaultDict[type, Any] = defaultdict(lambda: None)
+    _locks: DefaultDict[type, threading.Lock] = defaultdict(threading.Lock)
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
