@@ -1,3 +1,3 @@
-from bafrapy.logger.log import LogConfig, LogField, LoguruConfig, LoguruLogger
+from bafrapy.logger.log import LogField, LoguruConfig, LoguruLogger
 
-__all__ = ["LoguruLogger", "LogField", "LogConfig", "LoguruConfig"]
+__all__ = ["LoguruLogger", "LogField", "LoguruConfig"]

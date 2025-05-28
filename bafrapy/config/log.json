@@ -1,0 +1,10 @@
+{
+        "level": "INFO",
+        "format": "<green>{time:YYYY-MM-DD HH:mm:ss}</green> <level>{level:8}</level> <cyan>{message}</cyan> {extra[formatted]}",
+        "enqueue": true,
+        "backtrace": true,
+        "diagnose": false,
+        "colorize": true,
+        "log_file": "",
+        "rotation": ""
+}
