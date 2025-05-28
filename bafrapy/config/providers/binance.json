@@ -1,0 +1,17 @@
+{
+    "provider_name": "BINANCE",
+    "routes": {
+        "api_domain": "https://api.binance.com",
+        "exchange_info_endpoint": "api/v3/exchangeInfo",
+        "aggTrades_endpoint": "api/v3/aggTrades",
+        "data_vision_domain": "https://data.binance.vision",
+        "data_daily_klines_URL": "data/spot/daily/klines",
+        "data_monthly_klines_URL": "data/spot/monthly/klines",
+        "max_last_date_attempts": 10
+    },
+    "backoff": {
+        "timeout": 10,
+        "max_tries": 3,
+        "giveup_codes": [429, 500, 502, 503, 504]
+    }
+}
