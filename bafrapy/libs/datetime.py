@@ -1,7 +1,16 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 
 def normalize_mixed_timestamp(ts: int) -> datetime:
+    if isinstance(ts, datetime):
+        return ts.astimezone(timezone.utc)
+    
+    if isinstance(ts, date):
+        return datetime(ts.year, ts.month, ts.day, tzinfo=timezone.utc)
+
+    if isinstance(ts, str):
+        ts = int(ts)
+
     ts_len = len(str(ts))
     if ts_len <= 10 or (10 < ts_len < 13):
         ts_normalized = ts
