@@ -14,5 +14,8 @@ class AssetRepository(CRUDRepository[Asset, str]):
     def get_by_provider(self, provider: str) -> List[Asset]:
         return self.list(Asset.provider_id == provider)
 
-    def get_undated_assets(self, provider: str) -> List[Asset]:
-        return self.list(Asset.provider_id == provider, Asset.start_date == None)
+    def get_undated_assets(self, provider: str, limit: int = 100) -> List[Asset]:
+        return self.list(Asset.provider_id == provider, Asset.start_date == None, limit=limit)
+
+    def count_undated_assets(self, provider: str) -> int:
+        return self.count(Asset.provider_id == provider, Asset.start_date == None)

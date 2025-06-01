@@ -27,8 +27,8 @@ class CRUDRepository(AbstractRepository[T, ID]):
                 self.session.merge(instance)
         return instances
 
-    def get_by_id(self, id: ID) -> Optional[T]:
-        return self.session.query(self.model).filter(self.model.id == id).first()
+    def get_by_id(self, id: ID, archived: bool = False) -> Optional[T]:
+        return self.session.query(self.model).filter(self.model.id == id, self.model.status != 'ARCHIVED' if not archived else True).first()
 
     def archive(self, instance: T) -> bool:
         instance.status = 'ARCHIVED'
@@ -41,5 +41,8 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def count(self, *filters: any) -> int:
         return self.session.query(self.model).filter(*filters).count()
     
-    def list(self, *filters: any) -> List[T]:
-        return self.session.query(self.model).filter(*filters).all()
+    def list(self, *filters: any, limit: int = None, ) -> List[T]:
+        query = self.session.query(self.model).filter(*filters)
+        if limit:
+            query = query.limit(limit)
+        return query.all()

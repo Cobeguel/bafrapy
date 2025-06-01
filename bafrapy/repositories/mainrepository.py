@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from bafrapy.repositories.asset import AssetRepository
 from bafrapy.repositories.provider import ProviderRepository
 from bafrapy.repositories.resolution import ResolutionRepository
+from bafrapy.repositories.result import ResultRepository
 from bafrapy.repositories.uow import UnitOfWork
 
 
@@ -16,19 +17,20 @@ class UnitOfWorkContext(UnitOfWork):
     _providers: ProviderRepository = field(init=False)
     _assets: AssetRepository = field(init=False)
     _resolutions: ResolutionRepository = field(init=False)
+    _results: ResultRepository = field(init=False)
 
     def __attrs_post_init__(self):
         self._providers = ProviderRepository(self._session)
         self._assets = AssetRepository(self._session)
         self._resolutions = ResolutionRepository(self._session)
+        self._results = ResultRepository(self._session)
     def __enter__(self) -> "UnitOfWorkContext":
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
             self._session.rollback()
-        else:
-            self._session.commit()
+
         self._session.close()
 
     def commit(self):
@@ -49,6 +51,9 @@ class UnitOfWorkContext(UnitOfWork):
     def resolutions(self) -> ResolutionRepository:
         return self._resolutions
 
+    @property
+    def results(self) -> ResultRepository:
+        return self._results
 
 @define
 class MainRepository:
