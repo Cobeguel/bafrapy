@@ -1,15 +1,15 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, getcontext
 from typing import Generic, Iterator, TypeVar
 
-from loguru import logger
 import pandas as pd
 
-from bafrapy.models.data.repo import DataRepository
-
+from bafrapy.datawarehouse.ohlcv import OHLCV
+from bafrapy.datawarehouse.repository import ClikhouseOHLCVRepository
+from bafrapy.logger import LoguruLogger as log
 T = TypeVar('T')
 
 def set_context(precision: int):
@@ -51,10 +51,10 @@ class OHLCV:
         self.high = Decimal(self.high)
         self.low = Decimal(self.low)
         self.close = Decimal(self.close)
-        self.volume = Decimal(self.volume)     
+        self.volume = Decimal(self.volume)  
 
 @dataclass
-class DataSet(metaclass=ABCMeta):
+class DataSet(ABC):
     resolution: int
     current_data: OHLCV = field(default=None, init=False)
 
@@ -118,16 +118,16 @@ class DataSetClickhouse(DataSetPandas):
     stream: Iterator[pd.DataFrame] = field(default=None, init=False)
     data: pd.DataFrame = field(default=None, init=False)
     chunk_iterator: Iterator[pd.DataFrame] = field(default=None, init=False)
-    conn: DataRepository = field(default_factory=DataRepository, init=False)
+    client: ClikhouseOHLCVRepository = field(default_factory=ClikhouseOHLCVRepository, init=False)
 
     def _initialize(self):
-        self.stream = self.conn.get_data_stream(self.asset, self.resolution, self.start_date, self.end_date)
+        self.stream = self.client.get_data_stream(self.asset, self.resolution, self.start_date, self.end_date)
         self.data = next(self.stream, None)
         if self.data is None:
             raise ValueError(f"No data for {self.asset} by the specified range: {self.start_date} - {self.end_date}")
         self.chunk_iterator = self.data.itertuples()
 
-        logger.info(f"DataSetClickhouse initialized: {self.asset} - {self.start_date} - {self.end_date}")
+        log().info(f"DataSetClickhouse initialized: {self.asset} - {self.start_date} - {self.end_date}")
 
     def __post_init__(self):
         self._initialize()

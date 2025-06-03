@@ -6,9 +6,10 @@ from decimal import Decimal
 from enum import Enum
 from typing import ClassVar, Dict, List, OrderedDict
 
-from loguru import logger
 import numpy as np
 import pandas as pd
+
+from bafrapy.logger import LogField, LoguruLogger as log
 
 from bafrapy.backtest.dataset import OHLCV, DataSet
 from bafrapy.backtest.exceptions import *
@@ -203,7 +204,7 @@ class MarketOrder(SimpleOrder):
         if self.quantity <= 0:    
             raise ValueError("ammount to buy/sell must be greater than 0")
         
-        logger.debug(f"market order {self.order_id} created: {self.create_time}")
+        log().debug(f"market order {self.order_id} created: {self.create_time}")
         
     def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
         """
@@ -226,7 +227,7 @@ class MarketOrderQuote(SimpleOrder):
         if self.quantity <= 0:
             raise ValueError("order cannot be set with negative currency")
         
-        logger.debug(f"market order {self.order_id} created: {self.create_time}")
+        log().debug(f"market order {self.order_id} created: {self.create_time}")
         
     def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
         self.state = OrderState.pre_executed
@@ -253,7 +254,7 @@ class LimitOrder(SimpleOrder):
        if self.price < 0:
             raise ValueError("price cannot be negative")
        
-       logger.debug(f"limit order {self.order_id} created: {self.create_time}")
+       log().debug(f"limit order {self.order_id} created: {self.create_time}")
 
 
     @property
@@ -294,7 +295,7 @@ class Trade:
         if self.order.state != OrderState.executed or self.order.state != OrderState.pre_executed:
             raise ValueError("order must be executed")
             
-        logger.debug(f"Trade created: {self.executed_time}")
+        log().debug(f"Trade created: {self.executed_time}")
 
     @property        
     def side(self) -> Side:
@@ -386,7 +387,7 @@ class Position:
         self.quantity += init_trade.quantity
         order = init_trade.order # type: SimpleOrder
         self.side = order.side
-        logger.debug(f"Position created with trade made by order {init_trade.order.order_id} at {init_trade.executed_time}")
+        log().debug(f"Position created with trade made by order {init_trade.order.order_id} at {init_trade.executed_time}")
 
     def is_closed(self) -> bool:
         """
@@ -489,6 +490,7 @@ class VBrokerConfig:
     initial_quote: Decimal = field(default=Decimal(0))
     fee: Decimal = field(default=Decimal(0))
     data: DataSet = field(default=None)
+
 
 @dataclass
 class VBroker:
@@ -709,7 +711,7 @@ class VBroker:
         self.trades.append(trade)
 
     
-    def _process_orders(self, pending_orders: OrderedDict[Order]):
+    def _process_orders(self, pending_orders: OrderedDict[int, Order]):
         """
         Process all pending orders. This method is called within next_data method.
         Tries to execute all pending orders. As a pending order could generate a new order, 
@@ -720,12 +722,12 @@ class VBroker:
         - The reserved money for market orders is unknown.
         """
 
-        logger.debug(f"number of orders to process: {len(pending_orders)}")
+        log().debug(f"number of orders to process: {len(pending_orders)}")
         processed_orders = []
         new_orders = [] # Orders as result from composite orders
         for order_id in self.pending_orders.keys():
             order = self.pending_orders[order_id]
-            logger.debug(f"order to process: {type(order)} - {order.order_id}")
+            log().debug(f"order to process: {type(order)} - {order.order_id}")
             if self.pending_orders[order_id].state != OrderState.pending:
                 raise NewOrderNotOpen(order.order_id)
 
