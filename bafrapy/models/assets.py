@@ -17,10 +17,14 @@ class Asset(BaseTable):
     symbol: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     base: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     quote: Mapped[str] = mapped_column(String(255), nullable=False)
-    provider_id: Mapped[Optional[str]] = mapped_column("provider", ForeignKey("def_providers.id", ondelete="SET NULL"), nullable=True)
     start_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
-    
-    provider: Mapped[Optional[Provider]] = relationship("Provider", back_populates="assets")
+    provider_id: Mapped[Optional[str]] = mapped_column("provider", ForeignKey("def_providers.id", ondelete="SET NULL"), nullable=True)
+
+    provider: Mapped[Optional[Provider]] = relationship(
+        "Provider",
+        foreign_keys= lambda: Asset.provider_id,
+        back_populates= "assets"
+    )
 
     def __init__(self, provider: Provider, symbol: str, base: str, quote: str):
         self.id = f"{provider.id}_{self._normalize_string(symbol)}"
