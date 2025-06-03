@@ -5,7 +5,7 @@ from bafrapy.models.base import BaseModel
 from bafrapy.repositories import MainRepository
 
 
-class IntegrationTestBase:
+class IntegrationTestDB:
     def setup_method(self):
         self.engine = create_engine("sqlite:///:memory:")
         BaseModel.metadata.create_all(self.engine)
@@ -15,3 +15,9 @@ class IntegrationTestBase:
     def teardown_method(self):
         BaseModel.metadata.drop_all(self.engine)
         self.engine.dispose()
+
+    def get_main_repo(self):
+        return self.main_repo
+
+    def get_engine(self):
+        return self.engine

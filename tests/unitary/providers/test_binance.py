@@ -11,10 +11,10 @@ import responses
 from freezegun import freeze_time
 from responses import matchers
 
-from bafrapy.logger.log import LoguruLogger as log
-from bafrapy.providers.binance import BackoffRequest, BinanceConfig, BinanceProvider
-from bafrapy.providers.base import Resolution
 from bafrapy.libs.datetime import normalize_mixed_timestamp
+from bafrapy.logger.log import LoguruLogger as log
+from bafrapy.providers.base import Resolution
+from bafrapy.providers.binance import BackoffRequest, BinanceConfig, BinanceProvider
 
 kline_rows = {
     0: {

@@ -11,7 +11,6 @@ from testcontainers.clickhouse import ClickHouseContainer
 from bafrapy.datawarehouse.repository import ClikhouseOHLCVRepository
 from bafrapy.logger.log import LoguruLogger as log
 
-
 single_integer = {
     "provider": "test_provider",
     "symbol": "test_symbol",
@@ -187,7 +186,6 @@ multiple_symbols = [
         "volume": Decimal("400.00")
     }
 ]
-
 
 gap_data = [
     {

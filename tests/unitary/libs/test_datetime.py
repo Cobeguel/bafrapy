@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from bafrapy.libs.datetime import normalize_mixed_timestamp, TimestampFormatter
+from bafrapy.libs.datetime import TimestampFormatter, normalize_mixed_timestamp
+
 
 class TestNormalizeMixedTimestamp:
     def test_timestamp_in_seconds(self):

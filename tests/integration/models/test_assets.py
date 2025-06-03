@@ -1,23 +1,28 @@
-from bafrapy.models import Asset
-from bafrapy.models.providers import Provider
-from tests.models.base import IntegrationTestBase
+from bafrapy.models import Asset, Provider
+from tests.integration.base import IntegrationTestDB
 
 
-class TestProviderIntegration(IntegrationTestBase):
+class TestAssetIntegration(IntegrationTestDB):
 
-    def test_insert_provider(self):
+    def test_create_asset(self):
         provider = Provider(id="BINANCE", display_name="Binance")
+        asset = Asset(provider=provider, symbol="BTC", base="BTC", quote="USDT")
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)
+            uow.assets.save(asset)
             uow.commit()
 
+        expected_id = "BINANCE_BTC"
         with self.main_repo.start_session() as uow:
-            result = uow.providers.get_by_id("BINANCE")
+            result = uow.assets.get_by_id(expected_id)
 
-        assert result is not None
-        assert result.id == "BINANCE"
-        assert result.display_name == "Binance"
+            assert result is not None
+            assert result.provider.id == "BINANCE"
+            assert result.id == expected_id
+            assert result.symbol == "BTC"
+            assert result.base == "BTC"
+            assert result.quote == "USDT"
 
     def test_archive_provider(self):
         provider = Provider(id="BINANCE", display_name="Binance")
@@ -38,5 +43,3 @@ class TestProviderIntegration(IntegrationTestBase):
         assert result_archived is not None
         assert result_archived.status == "ARCHIVED"
         assert result_archived.display_name == "Binance"
-
-    

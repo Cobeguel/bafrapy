@@ -1,10 +1,10 @@
 from uuid import uuid4
 
 from bafrapy.models import Result
-from tests.models.base import IntegrationTestBase
+from tests.integration.base import IntegrationTestDB
 
 
-class TestResultIntegration(IntegrationTestBase):
+class TestResultIntegration(IntegrationTestDB):
 
     def test_create_result(self):
         result = Result(value="test")
