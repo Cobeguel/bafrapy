@@ -37,16 +37,16 @@ services:
       - "${DB_EXTERNAL_PORT}:${DB_PORT}" 
 
   directus:
-    image: directus/directus:11.3.5
+    image: directus/directus:11.9.0
     container_name: bafrapy-directus
     networks:
       - bafrapy-network
     ports:
       - ${DIRECTUS_EXTERNAL_PORT}:${DIRECTUS_PORT}
     volumes:
-      - ./uploads:/directus/uploads
-      - ./extensions:/directus/extensions
-      - ./templates:/directus/templates
+      - ./directus/uploads:/directus/uploads
+      - ./directus/extensions:/directus/extensions
+      - ./directus/templates:/directus/templates
     depends_on:
       - database
 
@@ -88,7 +88,7 @@ services:
       PMA_HOST: bafrapy-mysql
       PMA_USER: ${DB_USER}
       PMA_PASSWORD: ${DB_PASSWORD}
-      UPLOAD_LIMIT: 100M 
+      UPLOAD_LIMIT: 200M
 
 networks:
   bafrapy-network:
