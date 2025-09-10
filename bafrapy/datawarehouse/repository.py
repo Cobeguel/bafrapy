@@ -9,7 +9,6 @@ import pandas as pd
 from attrs import define, field
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.query import QueryResult
-from loguru import logger
 from pandas.tseries.frequencies import to_offset
 
 from bafrapy.datawarehouse.base import (
@@ -89,7 +88,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
             for query in queries:
                 if query.strip() == '' or query.strip().startswith('/*') or query.strip().startswith('--'):
                     continue
-                logger.debug(f"Running query: {query}")
+                log().debug(f"Running query: {query}")
                 self._client.command(query)
 
     def _command_int(self, q: str, parameters: dict) -> None:
