@@ -1,7 +1,8 @@
 
-from dataclasses import dataclass, field, asdict
-from bafrapy.backend.tasks.queues import QueueType
-from bafrapy.backend.tasks.worker import RunnableTask, Reconstructable
+from dataclasses import asdict, dataclass, field
+
+from bafrapy.tasks.factory import Reconstructable, RunnableTask
+from bafrapy.tasks.queue import QueueType
 
 
 @dataclass
@@ -9,9 +10,6 @@ class BacktetingPayload(RunnableTask):
 
     provider: str = field(default="")
     asset_type: str = field(default="")
-
-    def get_task_queue(self) -> QueueType:
-        return QueueType.BACKTEST
     
     def get_task_key(self) -> str:
         return "backtest"
@@ -23,6 +21,7 @@ class BacktetingPayload(RunnableTask):
         self.provider = data["provider"]
         self.asset_type = data["asset_type"]
 
+
 @dataclass
 class BacktetingTask(RunnableTask):
     payload: BacktetingPayload
@@ -32,6 +31,6 @@ class BacktetingTask(RunnableTask):
 
 
 class BacktetingBuilder(Reconstructable):
-    def construct(self, data: dict) -> RunnableTask:
+    def build(self, data: dict) -> RunnableTask:
         return BacktetingTask(BacktetingPayload(data))
 

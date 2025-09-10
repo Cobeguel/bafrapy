@@ -1,13 +1,18 @@
+import os
 import sys
+
+from os import getenv
+
+import redis
+
 from redis import Redis
 from rq import Queue, SimpleWorker
-from os import getenv
-from bafrapy.backend.tasks.db import TaskDB
-from bafrapy.backend.tasks.worker import TaskFactory
-from bafrapy.backend.tasks.data import SyncDataPayload, SyncDataBuilder
-from bafrapy.backend.tasks.backtesting import BacktetingPayload, BacktetingBuilder
-import os
-import redis
+
+from bafrapy.backend.taskqueues.worker import TaskFactory
+from bafrapy.tasks.backtesting import BacktetingBuilder, BacktetingPayload
+from bafrapy.tasks.syncdata import SyncDataBuilder, SyncDataPayload
+from bafrapy.tasks.syncsymbols import SyncDataBuilder, SyncDataPayload
+
 
 def main(queue_name=None):
     if queue_name is None:
@@ -28,7 +33,8 @@ def main(queue_name=None):
 
     conn = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=os.getenv("REDIS_DB"))
     worker = SimpleWorker(queue, connection=conn)
-    worker.work()
+
+    worker.work(with_scheduler=True)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
