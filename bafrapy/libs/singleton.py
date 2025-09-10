@@ -1,7 +1,8 @@
 import threading
+
+from abc import ABCMeta
 from collections import defaultdict
 from typing import Any, DefaultDict
-from abc import ABCMeta
 
 
 class Singleton(ABCMeta):

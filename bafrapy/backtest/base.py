@@ -9,10 +9,9 @@ from typing import ClassVar, Dict, List, OrderedDict
 import numpy as np
 import pandas as pd
 
-from bafrapy.logger import LogField, LoguruLogger as log
-
 from bafrapy.backtest.dataset import OHLCV, DataSet
 from bafrapy.backtest.exceptions import *
+from bafrapy.logger import LogField, LoguruLogger as log
 
 
 class Side(Enum):
