@@ -170,6 +170,7 @@ cython_debug/
 .local
 clickhouse
 logs/
+data/
 
 # Directus
-directus/
+data/directus/

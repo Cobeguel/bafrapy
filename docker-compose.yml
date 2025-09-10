@@ -37,16 +37,18 @@ services:
       - "${DB_EXTERNAL_PORT}:${DB_PORT}" 
 
   directus:
-    image: directus/directus:11.9.0
+    build:
+      context: ./directus
+      dockerfile: Dockerfile
     container_name: bafrapy-directus
     networks:
       - bafrapy-network
     ports:
       - ${DIRECTUS_EXTERNAL_PORT}:${DIRECTUS_PORT}
     volumes:
-      - ./directus/uploads:/directus/uploads
-      - ./directus/extensions:/directus/extensions
-      - ./directus/templates:/directus/templates
+      - ${DIRECTUS_BASE_PATH}/uploads:/directus/uploads
+      - ${DIRECTUS_BASE_PATH}/extensions:/directus/extensions
+      - ${DIRECTUS_BASE_PATH}/templates:/directus/templates
     depends_on:
       - database
 
