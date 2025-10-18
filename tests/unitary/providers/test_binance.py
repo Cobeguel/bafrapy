@@ -13,8 +13,8 @@ from responses import matchers
 
 from bafrapy.libs.datetime import normalize_mixed_timestamp
 from bafrapy.logger.log import LoguruLogger as log
-from bafrapy.providers.base import Resolution
-from bafrapy.providers.binance import BackoffRequest, BinanceConfig, BinanceProvider
+from bafrapy.providers.base import Resolution, HTTPClient, BackoffConfig
+from bafrapy.providers.binance import BinanceProvider, BinanceConfig
 
 kline_rows = {
     0: {
@@ -91,33 +91,46 @@ kline_rows = {
 
 
 class TestBinanceConfig:
-
     @pytest.fixture(autouse=True)
     def setup_config(self):
         config = BinanceConfig(
             api_base_domain="https://api.binance.com",
             exchange_info_endpoint="api/v3/exchangeInfo",
             aggTrades_endpoint="api/v3/aggTrades",
+            api_backoff_config=BackoffConfig(
+                timeout=10,
+                max_tries=3,
+                backoff_factor=1,
+                giveup_codes=[404]
+            ),
             data_vision_domain="https://data.binance.vision",
             data_daily_klines_URL="data/spot/daily/klines",
             data_monthly_klines_URL="data/spot/monthly/klines",
-            max_last_date_attempts=5
+            data_backoff_config=BackoffConfig(
+                timeout=10,
+                max_tries=3,
+                backoff_factor=1,
+                giveup_codes=[404]
+            ),
+            last_day_gaps_attempts=5
         )
 
         self.config = config
-    
+
+    def test_data_daily_URL(self):
+        assert str(self.config.data_daily_URL("BTCUSDT", "1m", 2024, 5, 25)) == "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-05-25.zip"
+
+    def test_data_monthly_URL(self):
+        assert str(self.config.data_monthly_URL("BTCUSDT", "1m", 2024, 5)) == "https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-05.zip"
+
     def test_symbols_URL(self):
         assert str(self.config.symbols_URL()) == "https://api.binance.com/api/v3/exchangeInfo"
 
     def test_aggTrades_URL(self):
         assert str(self.config.aggTrades_URL()) == "https://api.binance.com/api/v3/aggTrades"
 
-    def test_data_vision_URL(self):
-        assert str(self.config.data_vision_URL("BTCUSDT", "1m", datetime(2024, 5, 25).date())) == "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-05-25.zip"
-
 
 class TestBinanceProvider:
-
     @pytest.fixture(scope="class", autouse=True)
     def setup_class(self):
         log().deactivate()
@@ -129,17 +142,24 @@ class TestBinanceProvider:
             api_base_domain="https://api.bafrapy-test.com",
             exchange_info_endpoint="api/v3/exchangeInfo",
             aggTrades_endpoint="api/v3/aggTrades",
+            api_backoff_config=BackoffConfig(
+                timeout=10,
+                max_tries=3,
+                backoff_factor=1,
+                giveup_codes=[404]
+            ),
             data_vision_domain="https://data.bafrapy-test.com",
             data_daily_klines_URL="data/spot/daily/klines",
             data_monthly_klines_URL="data/spot/monthly/klines",
-            max_last_date_attempts=5
+            data_backoff_config=BackoffConfig(
+                timeout=10,
+                max_tries=3,
+                backoff_factor=1,
+                giveup_codes=[404]
+            ),
+            last_day_gaps_attempts=5
         )
-        backoff_request = BackoffRequest(
-            timeout=10,
-            max_tries=3,
-            giveup_codes=[429, 500, 502, 503, 504]
-        )
-        self.provider = BinanceProvider(provider_name, config, backoff_request)
+        self.provider = BinanceProvider(provider_name, config)
 
    
     @responses.activate
@@ -232,6 +252,7 @@ class TestBinanceProvider:
         assert symbols[1].lot_increment == Decimal("0.00000000")
 
 
+    @freeze_time("2024-05-26")
     @responses.activate
     def test_symbol_first_date(self):
         responses.add(
@@ -256,6 +277,12 @@ class TestBinanceProvider:
                     "M": True
                 }
             ]
+        )
+
+        responses.add(
+            responses.HEAD,
+            "https://data.bafrapy-test.com/data/spot/monthly/klines/BTCUSDC/1m/BTCUSDC-1m-2022-09.zip",
+            status=200
         )
 
         assert self.provider.symbol_first_date("BTCUSDC") == datetime.fromtimestamp(1662076800796 / 1000)

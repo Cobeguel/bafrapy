@@ -4,12 +4,10 @@ from decimal import Decimal
 from typing import List
 
 import pandas as pd
-import requests
 
 from attrs import define, field
-from loguru import logger
-from requests import Request, Response
-from requests.exceptions import HTTPError
+from requests import Request, Response, Session
+from requests.exceptions import HTTPError, Timeout
 from tenacity import (
     RetryError,
     retry,
@@ -18,91 +16,31 @@ from tenacity import (
     wait_exponential,
 )
 
+from bafrapy.logger import LoguruLogger as log
 
-@define()
+
+@define
 class Symbol():
-    _symbol: str = field(alias="symbol")
-    _base: str = field(alias="base")
-    _quote: str = field(alias="quote")
-    _min_lot: Decimal = field(alias="min_lot", default=Decimal(0))
-    _max_lot: Decimal = field(alias="max_lot", default=Decimal(0))
-    _lot_increment: Decimal = field(alias="lot_increment", default=Decimal(0))
-
-    @property
-    def symbol(self) -> str:
-        return self._symbol
-    
-    @symbol.setter
-    def symbol(self, value: str):
-        self._symbol = value
-
-    @property
-    def base(self) -> str:
-        return self._base
-    
-    @base.setter
-    def base(self, value: str):
-        self._base = value
-    
-    @property
-    def quote(self) -> str:
-        return self._quote
-    
-    @quote.setter
-    def quote(self, value: str):
-        self._quote = value
-
-    @property
-    def min_lot(self) -> Decimal:
-        return self._min_lot
-    
-    @min_lot.setter
-    def min_lot(self, value: Decimal):
-        self._min_lot = value
-    
-    @property
-    def max_lot(self) -> Decimal:
-        return self._max_lot
-
-    @max_lot.setter
-    def max_lot(self, value: Decimal):
-        self._max_lot = value
-    
-    @property
-    def lot_increment(self) -> Decimal:
-        return self._lot_increment
-    
-    @lot_increment.setter
-    def lot_increment(self, value: Decimal):
-        self._lot_increment = value
-
-@define
-class SymbolDetail():
-    _symbol: str = field(alias="symbol")
-    _base: str = field(alias="base")
-
-
-@define
-class TabularOHLCV():
-#External class
-    OHLCV: pd.DataFrame = field(default=pd.DataFrame())
+    symbol: str
+    base: str
+    quote: str
+    min_lot: Decimal = field(default=Decimal(0))
+    max_lot: Decimal = field(default=Decimal(0))
+    lot_increment: Decimal = field(default=Decimal(0))
 
 
 @define
 class Resolution():
-    _name: str = field(alias="name")
-    _seconds: int = field(alias="seconds")
+    name: str
+    seconds: int
 
-    @property
-    def name(self) -> str:
-        return self._name
-    
-    @property
-    def seconds(self) -> int:
-        return self._seconds
-    
 
 class Provider(ABC):
+    _provider_name: str = field(alias="provider_name")
+
+    @property
+    def provider_name(self) -> str:
+        return self._provider_name
 
     @abstractmethod
     def list_available_symbols(self) -> List[Symbol]:
@@ -121,39 +59,60 @@ class Provider(ABC):
         ...
 
 
-@define
-class BackoffRequest(ABC):
-    _timeout: int = field(alias="timeout")
-    _max_tries: int = field(alias="max_tries")
-    _giveup_codes: List[int] = field(alias="giveup_codes")
-
-    def _is_retryable(self, e: Exception) -> bool:
-        return isinstance(e, HTTPError) and e.response.status_code not in self.giveup_codes
-
-    def _make_request(self, req: Request) -> Response:
-        with requests.Session() as session:
-            prepared = session.prepare_request(req)
-            logger.debug(f"Requesting {prepared.url}")
-            response = session.send(prepared, timeout=self.timeout)
-            response.raise_for_status()
-            return response
-
-    def request(self, req: Request) -> Response:
-        retry_request = retry(
-            stop=stop_after_attempt(self.max_tries),
-            wait=wait_exponential(multiplier=1),
-            retry=retry_if_exception(self._is_retryable),
-            reraise=True
-        )
-
-        try:
-            return retry_request(self._make_request)(req)
-        except RetryError as e:
-            raise e.last_attempt.exception()
-
-
-@define
 class ProviderFactory(ABC):
     @abstractmethod
     def create_provider(self) -> Provider:
         ...
+
+
+class ProviderConfig(ABC):
+    @abstractmethod
+    def load_config(cls, key: str, content: str):
+        ...
+
+@define
+class BackoffConfig():
+    timeout: int = field(default=10)
+    backoff_factor: int = field(default=30)
+    max_tries: int = field(default=3)
+    giveup_codes: List[int] = field(default=[])
+
+
+@define
+class HTTPClient():
+    _backoff_config: BackoffConfig = field(alias="backoff_config")
+    _session: Session = field(factory=Session, init=False, repr=False)
+
+    def _is_retryable(self, e: Exception) -> bool:
+        return (
+            isinstance(e, Timeout) or
+            (isinstance(e, HTTPError) and e.response.status_code not in self._backoff_config.giveup_codes)
+        )
+
+    def _make_request(self, req: Request, raisable: bool = True) -> Response:
+        prepared = self._session.prepare_request(req)
+        log().debug(f"Requesting {prepared.url}")
+        response = self._session.send(prepared, timeout=self._backoff_config.timeout)
+        if raisable:
+            response.raise_for_status()
+        log().debug(f"Response {response.status_code} from {prepared.url}")
+        return response
+
+    def request(self, endpoint: str, method: str, params: dict = None, headers: dict = None, json: dict = None, retrayable: bool = True, raisable: bool = True) -> Response:
+        req = Request(method, endpoint, params=params, headers=headers, json=json)
+
+        if retrayable:
+            retry_request = retry(
+                stop=stop_after_attempt(self._backoff_config.max_tries),
+                wait=wait_exponential(multiplier=self._backoff_config.backoff_factor),
+                retry=retry_if_exception(self._is_retryable),
+                reraise=True
+            )
+            try:
+                return retry_request(self._make_request)(req, raisable=raisable)
+            except RetryError as e:
+                raise e.last_attempt.exception()
+
+        else:
+            return self._make_request(req, raisable=raisable)
+

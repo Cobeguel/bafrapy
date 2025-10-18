@@ -4,19 +4,23 @@ import zipfile
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from http import HTTPMethod
 from typing import Iterator, List
 
 import pandas as pd
 import requests
 
 from attrs import define, field
+from cattrs import GenConverter
 from dateutil.relativedelta import relativedelta
+from requests import HTTPError, Request
 from yarl import URL
 
 from bafrapy.libs.datetime import normalize_mixed_timestamp
 from bafrapy.logger.log import LogField, LoguruLogger as log
 from bafrapy.providers.base import (
-    BackoffRequest,
+    BackoffConfig,
+    HTTPClient,
     Provider,
     ProviderFactory,
     Resolution,
@@ -25,59 +29,90 @@ from bafrapy.providers.base import (
 
 
 @define
-class BinanceConfig:
-    _api_base_domain: str = field(alias="api_base_domain")
+class BinanceConfig():
+    _api_domain: str = field(alias="api_base_domain")
     _exchange_info_endpoint: str = field(alias="exchange_info_endpoint")
     _aggTrades_endpoint: str = field(alias="aggTrades_endpoint")
+    _api_backoff_config: BackoffConfig = field(alias="api_backoff_config")
 
     _data_vision_domain: str = field(alias="data_vision_domain")
     _data_daily_klines_URL: str = field(alias="data_daily_klines_URL")
     _data_monthly_klines_URL: str = field(alias="data_monthly_klines_URL")
+    _data_backoff_config: BackoffConfig = field(alias="data_backoff_config")
 
-    _max_last_date_attempts: int = field(alias="max_last_date_attempts")
+    _last_day_gaps_attempts: int = field(alias="last_day_gaps_attempts")
 
-    @classmethod
-    def from_config_file(cls, config_file: str):
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-        try:
-            config = config['binance']
-            return cls(
-                api_base_domain=config['api_domain'],
-                exchange_info_endpoint=config['exchange_info_endpoint'],
-                aggTrades_endpoint=config['aggTrades_endpoint'],
-                data_vision_domain=config['data_vision_domain'],
-                data_daily_klines_URL=config['data_daily_klines_URL'],
-                data_monthly_klines_URL=config['data_monthly_klines_URL']
-            )
-        except KeyError:
-            raise ValueError(f"Invalid configuration file {config_file} for binance provider")
+    @property
+    def last_day_gaps_attempts(self) -> int:
+        return self._last_day_gaps_attempts
+
+    def get_api_backoff(self) -> BackoffConfig:
+        return BackoffConfig(
+            timeout=self._api_backoff_config.timeout,
+            max_tries=self._api_backoff_config.max_tries,
+            backoff_factor=self._api_backoff_config.backoff_factor,
+            giveup_codes=self._api_backoff_config.giveup_codes
+        )
+
+    def get_data_backoff(self) -> BackoffConfig:
+        return BackoffConfig(
+            timeout=self._data_backoff_config.timeout,
+            max_tries=self._data_backoff_config.max_tries,
+            backoff_factor=self._data_backoff_config.backoff_factor,
+            giveup_codes=self._data_backoff_config.giveup_codes
+        )
 
     def symbols_URL(self):
-        return URL(self._api_base_domain) / self._exchange_info_endpoint
+        return URL(self._api_domain) / self._exchange_info_endpoint
     
     def aggTrades_URL(self):
-        return URL(self._api_base_domain) / self._aggTrades_endpoint 
-    
+        return URL(self._api_domain) / self._aggTrades_endpoint 
+
     # Example https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2025-04-29.zip
-    # Example https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2025-04-29.zip
-    def data_vision_URL(self, symbol: str, resolution: str, date: datetime, monthly: bool = False):
-        if monthly:
-            return URL(self._data_vision_domain) / self._data_monthly_klines_URL / symbol / resolution / f"{symbol}-{resolution}-{date.strftime('%Y-%m')}.zip"
-        else:
-            return URL(self._data_vision_domain) / self._data_daily_klines_URL / symbol / resolution / f"{symbol}-{resolution}-{date.strftime('%Y-%m-%d')}.zip"
+    def data_monthly_URL(self, symbol: str, resolution: str, year: int, month: int):
+        return URL(self._data_vision_domain) / self._data_monthly_klines_URL / symbol / resolution / f"{symbol}-{resolution}-{year}-{month:02d}.zip"
+    
+    def data_daily_URL(self, symbol: str, resolution: str, year: int, month: int, day: int):
+        return URL(self._data_vision_domain) / self._data_daily_klines_URL / symbol / resolution / f"{symbol}-{resolution}-{year}-{month:02d}-{day:02d}.zip"
+        
+
 
 @define
 class BinanceProvider(Provider):
     _provider_name: str = field(alias="provider_name")
     _config: BinanceConfig = field(alias="config")
-    _backoff_request: BackoffRequest = field(alias="backoff_request")
-    _api_session: requests.Session = field(factory=requests.Session, init=False, repr=False)
-    _data_session: requests.Session = field(factory=requests.Session, init=False, repr=False)
+    _api_http_client: HTTPClient = field(init=False)
+    _data_http_client: HTTPClient = field(init=False)
+
+    def __attrs_post_init__(self):
+        self._api_http_client = HTTPClient(
+            backoff_config=self._config.get_api_backoff()
+        )
+        self._data_http_client = HTTPClient(
+            backoff_config=self._config.get_data_backoff()
+        )
+    
+    def _process_CSV_OHLCV(self, bytes: bytes, symbol: str, resolution: int) -> pd.DataFrame:
+        with io.BytesIO(bytes) as zip_bytes:
+            with zipfile.ZipFile(zip_bytes) as zf:
+                if len(zf.namelist()) != 1:
+                    raise ValueError("Binance provider expected exactly one file in the ZIP archive")
+                csv_file_name = zf.namelist()[0]
+                if not csv_file_name.endswith('.csv'):
+                    raise ValueError("Binance provider expected exactly one CSV file in the ZIP archive")
+                
+                with zf.open(csv_file_name) as csv_file:
+                    df = pd.read_csv(csv_file, header=None)
+                    df = df.iloc[:, :6]
+                    df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
+                    df['time'] = pd.to_datetime(df['time'].apply(normalize_mixed_timestamp), utc=True)
+                    df['resolution'] = resolution
+                    df['provider'] = self._provider_name
+                    return df
 
     def list_available_symbols(self) -> List[Symbol]:
-        response = self._api_session.get(self._config.symbols_URL())
-        response.raise_for_status()
+        log().info(f"List available symbols", LogField(key="provider", value=self._provider_name))
+        response = self._api_http_client.request(self._config.symbols_URL(), HTTPMethod.GET)
         body = response.json()
         log().info(f"Fetched available symbols from {self._provider_name}", LogField(key="symbols", value=len(body['symbols'])))
 
@@ -100,24 +135,24 @@ class BinanceProvider(Provider):
                 pass
 
             symbols.append(Symbol(item['symbol'], item['baseAsset'], item['quoteAsset'], min_lot, max_lot, lot_increment))
-            
-        return symbols
-    
-    def symbol_first_date(self, symbol: str) -> datetime:
-        params = {'symbol': symbol, 'fromId': 0, 'limit': 1}
-        response = self._api_session.get(self._config.aggTrades_URL(), params=params)
-        response.raise_for_status()
 
+        return symbols
+
+    def symbol_first_date(self, symbol: str) -> datetime:
+        log().info(f"Getting first date", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol))
+        params = {'symbol': symbol, 'fromId': 0, 'limit': 1}
+        response = self._api_http_client.request(self._config.aggTrades_URL(), 'GET', params=params)
         body = response.json()
+
         first_date = datetime.fromtimestamp(body[0]['T'] / 1000)
 
         log().debug("First date for symbol", LogField(key="symbol", value=symbol), LogField(key="date", value=first_date))
         return first_date
-    
+
     def symbol_last_date(self, symbol: str) -> date:
+        log().info(f"Getting last date", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol))
         params = {'symbol': symbol, 'limit': 1}
-        response = self._api_session.get(self._config.aggTrades_URL(), params=params)
-        response.raise_for_status()
+        response = self._api_http_client.request(self._config.aggTrades_URL(), HTTPMethod.GET, params=params)
 
         body = response.json()
         last_date = datetime.fromtimestamp(body[0]['T'] / 1000)
@@ -126,8 +161,12 @@ class BinanceProvider(Provider):
 
         found = False
         current_attempt = 0
-        while not found and current_attempt < self._config._max_last_date_attempts:
-            response = requests.head(self._config.data_vision_URL(symbol, '1m', last_date))
+        while not found and current_attempt < self._config.last_day_gaps_attempts:
+            response = self._data_http_client.request(
+                self._config.data_daily_URL(symbol, '1m', last_date.year, last_date.month, last_date.day),
+                'HEAD',
+                retrayable=False,
+                raisable=False)
             if response.status_code == 200:
                 found = True
             else:   
@@ -139,101 +178,31 @@ class BinanceProvider(Provider):
             raise ValueError(f"Last date for symbol {symbol} not found")
         
         log().debug("Last date for symbol", LogField(key="symbol", value=symbol), LogField(key="date", value=last_date))
+
         return last_date
 
-
     def get_day_data(self, symbol: str, day: date, resolution: Resolution) -> pd.DataFrame:
-        response = self._data_session.get(self._config.data_vision_URL(symbol, resolution.name, day, False))
-        return self._process_OHLCV(response.content, symbol, resolution.seconds)
+        log().info(f"Getting day data", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol), LogField(key="day", value=day), LogField(key="resolution", value=resolution.name))
+        response = self._data_http_client.request(self._config.data_daily_URL(symbol, resolution.name, day.year, day.month, day.day), HTTPMethod.GET)
+        data = self._process_CSV_OHLCV(response.content, symbol, resolution.seconds)
+        data['provider'] = self._provider_name
+        return data
+
     
     def get_month_data(self, symbol: str, month: date, resolution: Resolution) -> pd.DataFrame:
-        response = self._data_session.get(self._config.data_vision_URL(symbol, resolution.name, month, True))
-        return self._process_OHLCV(response.content, symbol, resolution.seconds)
-    
-    def get_data(self, symbol: str, start_date: date, resolution: Resolution) -> Iterator[pd.DataFrame]:
-        last_date = self.symbol_last_date(symbol)
-        if start_date > last_date:
-            return None
+        log().info(f"Getting month data", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol), LogField(key="month", value=month), LogField(key="resolution", value=resolution.name))
+        response = self._data_http_client.request(self._config.data_monthly_URL(symbol, resolution.name, month.year, month.month), HTTPMethod.GET)
+        data = self._process_CSV_OHLCV(response.content, symbol, resolution.seconds)
+        data['provider'] = self._provider_name
+        return data
 
-        between_months = (last_date.year - start_date.year) * 12 + (last_date.month - start_date.month)
-        between_days = (last_date.day - start_date.day)
-
-        
-        if between_months > 0 and not between_days == 1:
-            current_date = start_date
-            for _ in range(between_months):
-                response = self._data_session.get(self._config.data_vision_URL(symbol, resolution.name, current_date, True))
-                yield self._process_OHLCV(
-                        response.content, 
-                        symbol,
-                        resolution.seconds)
-                current_date = current_date + relativedelta(months=1)
-        if between_days > 0:
-            if between_months > 0:
-                current_date = date(last_date.year, last_date.month, 1)
-            else:
-                current_date = start_date
-            for _ in range(between_days):
-                response = self._data_session.get(self.config.data_vision_URL(symbol, resolution.name, current_date, False))
-
-                yield self._process_OHLCV(
-                        response.content, 
-                        symbol,
-                        resolution.seconds)
-            current_date = current_date + relativedelta(days=1)
-        
-        return None
-
-
-    def _process_OHLCV(self, bytes: bytes, symbol: str, resolution: int) -> pd.DataFrame:
-        with io.BytesIO(bytes) as zip_bytes:
-            with zipfile.ZipFile(zip_bytes) as zf:
-                if len(zf.namelist()) != 1:
-                    raise ValueError("Binance provider expected exactly one file in the ZIP archive")
-                csv_file_name = zf.namelist()[0]
-                if not csv_file_name.endswith('.csv'):
-                    raise ValueError("Binance provider expected exactly one CSV file in the ZIP archive")
-                
-                with zf.open(csv_file_name) as csv_file:
-                    df = pd.read_csv(csv_file, header=None)
-                    df = df.iloc[:, :6]
-                    df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
-                    df['time'] = pd.to_datetime(df['time'].apply(normalize_mixed_timestamp), utc=True)
-                    df['resolution'] = resolution
-                    df['provider'] = self._provider_name
-                    return df
 
 @define
 class BinanceFactory(ProviderFactory):
     _provider_name: str = field(alias="provider_name")
     _config: BinanceConfig = field(alias="config")
-    _backoff_request: BackoffRequest = field(alias="backoff_request")
-
-    @classmethod
-    def from_config_file(cls, config_file: str):
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-            try:
-                return cls(
-                    provider_name=config['provider_name'],
-                    config=BinanceConfig(
-                        api_base_domain=config['routes']['api_domain'],
-                        exchange_info_endpoint=config['routes']['exchange_info_endpoint'],
-                        aggTrades_endpoint=config['routes']['aggTrades_endpoint'],
-                        data_vision_domain=config['routes']['data_vision_domain'],
-                        data_daily_klines_URL=config['routes']['data_daily_klines_URL'],
-                        data_monthly_klines_URL=config['routes']['data_monthly_klines_URL'],
-                        max_last_date_attempts=config['routes']['max_last_date_attempts']
-                    ),
-                    backoff_request=BackoffRequest(
-                        timeout=config['backoff']['timeout'],
-                        max_tries=config['backoff']['max_tries'],
-                        giveup_codes=config['backoff']['giveup_codes']
-                    )
-                )
-            except KeyError:
-                raise ValueError(f"Invalid configuration file {config_file} for binance provider")
 
     def create_provider(self) -> BinanceProvider:
-        return BinanceProvider(self._provider_name, self._config, self._backoff_request)
+        return BinanceProvider(self._provider_name, self._config)
+
 
