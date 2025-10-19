@@ -88,9 +88,11 @@ services:
       - bafrapy-network
     environment:
       PMA_HOST: bafrapy-mysql
-      PMA_USER: ${DB_USER}
-      PMA_PASSWORD: ${DB_PASSWORD}
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
       UPLOAD_LIMIT: 200M
+    depends_on:
+      - database
 
 networks:
   bafrapy-network:
