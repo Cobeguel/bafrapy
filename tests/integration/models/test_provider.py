@@ -1,12 +1,11 @@
-from bafrapy.models import Asset
-from bafrapy.models.providers import Provider
+from bafrapy.models import Provider
 from tests.integration.base import IntegrationTestDB
 
 
 class TestProviderIntegration(IntegrationTestDB):
 
     def test_insert_provider(self):
-        provider = Provider(id="BINANCE", display_name="Binance")
+        provider = Provider(id="BINANCE", display_name="Binance", external_id="BINANCE")
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)

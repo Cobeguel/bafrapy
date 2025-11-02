@@ -1,4 +1,5 @@
 
+
 serve:
 	docker compose down
 	docker compose up -d
@@ -27,3 +28,9 @@ local-env:
 
 tidy:
 	isort bafrapy
+
+compile-generator:
+	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall
+
+generate-models:
+	uv run scripts/generate-models.py

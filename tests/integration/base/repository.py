@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from bafrapy.models.base import BaseModel
+from bafrapy.models import BaseModel
 from bafrapy.repositories import MainRepository
 
 

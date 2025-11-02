@@ -1,4 +1,6 @@
 from bafrapy.models import Asset, Provider
+from uuid import uuid4
+
 from tests.integration.base import IntegrationTestDB
 
 
@@ -6,20 +8,20 @@ class TestAssetIntegration(IntegrationTestDB):
 
     def test_create_asset(self):
         provider = Provider(id="BINANCE", display_name="Binance")
-        asset = Asset(provider=provider, symbol="BTC", base="BTC", quote="USDT")
+        id = str(uuid4())
+        asset = Asset(id=id, provider=provider, symbol="BTC", base="BTC", quote="USDT")
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)
             uow.assets.save(asset)
             uow.commit()
 
-        expected_id = "BINANCE_BTC"
         with self.main_repo.start_session() as uow:
-            result = uow.assets.get_by_id(expected_id)
+            result = uow.assets.get_by_id(id)
 
             assert result is not None
             assert result.provider.id == "BINANCE"
-            assert result.id == expected_id
+            assert result.id == id
             assert result.symbol == "BTC"
             assert result.base == "BTC"
             assert result.quote == "USDT"

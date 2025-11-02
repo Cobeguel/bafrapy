@@ -30,6 +30,9 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def get_by_id(self, id: ID, archived: bool = False) -> Optional[T]:
         return self.session.query(self.model).filter(self.model.id == id, self.model.status != 'ARCHIVED' if not archived else True).first()
 
+    def get_by_external_name(self, external_name: str, archived: bool = False) -> Optional[T]:
+        return self.session.query(self.model).filter(self.model.external_name == external_name, self.model.status != 'ARCHIVED' if not archived else True).first()
+
     def archive(self, instance: T) -> bool:
         instance.status = 'ARCHIVED'
         self.session.add(instance)
