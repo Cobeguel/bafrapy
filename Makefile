@@ -1,3 +1,4 @@
+.PHONY: tests
 
 serve:
 	docker compose down
@@ -21,6 +22,9 @@ local-env:
 
 lint:
 	ruff check .
+
+tests:
+	uv run -m pytest -q
 
 tidy:
 	isort bafrapy

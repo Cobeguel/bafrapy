@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Generic, List, Optional, TypeVar
+from sqlmodel import SQLModel
 
-from bafrapy.models.base import BaseTable
 
-T = TypeVar('T', bound=BaseTable)
+T = TypeVar('T', bound=SQLModel)
 ID = TypeVar('ID')
 
 class AbstractRepository(ABC, Generic[T, ID]):

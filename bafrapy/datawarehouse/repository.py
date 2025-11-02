@@ -78,7 +78,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         return resampled_data
 
     def initialize(self):
-        with resources.open_text('bafrapy.datawarehouse', 'ch_schema.sql') as f:
+         with resources.files('bafrapy.datawarehouse').joinpath('ch_schema.sql').open('r', encoding='utf-8') as f:
             file = f.read()
             queries = file.split(';')
             if len(queries) == 0:
