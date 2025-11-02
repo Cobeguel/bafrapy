@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
-
 from bafrapy.libs.datetime import TimestampFormatter, normalize_mixed_timestamp
 
 

@@ -1,7 +1,5 @@
 from datetime import datetime
 
-import pytest
-
 import bafrapy.backtest.base as base
 import bafrapy.backtest.dataset as dataset
 

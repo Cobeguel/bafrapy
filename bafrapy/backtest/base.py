@@ -7,11 +7,11 @@ from typing import ClassVar, Dict, List, OrderedDict
 
 from bafrapy.backtest.dataset import OHLCV, DataSet
 from bafrapy.backtest.exceptions import (
-    InvalidStateExecutedSimpleOrder, 
-    NotEnoughMoneyToExecuteMarketOrder, 
-    NotEnoughQuoteToExecuteMarketOrder, 
-    OrderAlreadyExists, 
-    NewOrderNotOpen, 
+    InvalidStateExecutedSimpleOrder,
+    NewOrderNotOpen,
+    NotEnoughMoneyToExecuteMarketOrder,
+    NotEnoughQuoteToExecuteMarketOrder,
+    OrderAlreadyExists,
 )
 from bafrapy.logger import LoguruLogger as log
 

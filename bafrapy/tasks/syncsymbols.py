@@ -1,16 +1,14 @@
 
 import json
 
-from typing import List
-
-from attrs import define, field, fields
+from attrs import define, field
 
 from bafrapy.logger import LogField, LoguruLogger as log
-from bafrapy.models.assets import Asset
+from bafrapy.models import Asset
 from bafrapy.providers.base import Provider
 from bafrapy.repositories.mainrepository import MainRepository
 from bafrapy.tasks.factory import Reconstructable, RunnableTask
-from bafrapy.tasks.queue import QueueType, SerializableTask
+from bafrapy.tasks.queue import SerializableTask
 
 
 @define

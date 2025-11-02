@@ -1,5 +1,4 @@
 
-
 serve:
 	docker compose down
 	docker compose up -d
@@ -25,6 +24,9 @@ start-worker:
 
 local-env:
 	cp .env.example .env
+
+lint:
+	ruff check .
 
 tidy:
 	isort bafrapy

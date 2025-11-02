@@ -2,7 +2,6 @@
 from dataclasses import asdict, dataclass, field
 
 from bafrapy.tasks.factory import Reconstructable, RunnableTask
-from bafrapy.tasks.queue import QueueType
 
 
 @dataclass

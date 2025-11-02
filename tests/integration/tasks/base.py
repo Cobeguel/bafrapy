@@ -6,7 +6,7 @@ from rq import Queue as QueueRQ
 from testcontainers.redis import RedisContainer
 
 from bafrapy.logger.log import LoguruLogger as log
-from bafrapy.tasks.queue import Queue, SerializableTask
+from bafrapy.tasks.queue import SerializableTask
 
 
 class TestSerializableTask(SerializableTask):

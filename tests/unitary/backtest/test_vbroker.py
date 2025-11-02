@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
-import pytest
 
 import bafrapy.backtest.base as base
 import bafrapy.backtest.dataset as dataset
