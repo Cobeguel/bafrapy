@@ -1,17 +1,19 @@
 from abc import ABC, ABCMeta, abstractmethod
-from collections import OrderedDict
 from dataclasses import InitVar, dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import ClassVar, Dict, List, OrderedDict
 
-import numpy as np
-import pandas as pd
-
 from bafrapy.backtest.dataset import OHLCV, DataSet
-from bafrapy.backtest.exceptions import *
-from bafrapy.logger import LogField, LoguruLogger as log
+from bafrapy.backtest.exceptions import (
+    InvalidStateExecutedSimpleOrder, 
+    NotEnoughMoneyToExecuteMarketOrder, 
+    NotEnoughQuoteToExecuteMarketOrder, 
+    OrderAlreadyExists, 
+    NewOrderNotOpen, 
+)
+from bafrapy.logger import LoguruLogger as log
 
 
 class Side(Enum):
@@ -819,7 +821,7 @@ class Strategy(metaclass=ABCMeta):
     def __post_init__(self):
         if self.data is None:
             raise ValueError("data is required")
-        if self.data.has_data() == False:
+        if not self.data.has_data():
             raise ValueError("data is empty")
         self.broker = VBroker(data=self.data, config=self.broker_config)  
 

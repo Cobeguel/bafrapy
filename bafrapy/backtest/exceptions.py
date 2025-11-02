@@ -13,7 +13,7 @@ class OrderAlreadyExists(BrokerException):
 
 class NotEnoughMoney(BrokerException):
     def __str__(self):
-        return f"NotEnoughMoney: broker has not enough money"
+        return "NotEnoughMoney: broker has not enough money"
   
     
 class NotEnoughMoneyToExecuteMarketOrder(BrokerException):
@@ -39,7 +39,7 @@ class NotEnoughQuoteToExecuteMarketOrder(BrokerException):
 
 class NotEnoughQuote(BrokerException):
     def __str__(self):
-        return f"NotEnoughQuote: broker has not enough quote"
+        return "NotEnoughQuote: broker has not enough quote"
     
 
 class OrderException(Exception):

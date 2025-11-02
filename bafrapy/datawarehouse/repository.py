@@ -1,4 +1,3 @@
-from dataclasses import field
 from datetime import date, timedelta
 from importlib import resources
 from numbers import Number
@@ -12,7 +11,6 @@ from clickhouse_connect.driver.query import QueryResult
 from pandas.tseries.frequencies import to_offset
 
 from bafrapy.datawarehouse.base import (
-    DateCount,
     OHLCVRepository,
     RowsResolution,
     SymbolAvailability,
@@ -38,8 +36,8 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         if not pd.api.types.is_datetime64_any_dtype(data['time']):
             try:
                 data['time'] = pd.to_datetime(data['time'].apply(normalize_mixed_timestamp), utc=True)
-            except Exception as e:
-                log().error(f"Error converting time column to datetime ")
+            except Exception:
+                log().error("Error converting time column to datetime ")
                 raise
         
         numeric_cols = ['open', 'high', 'low', 'close', 'volume']
@@ -98,21 +96,21 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
                 raise ValueError(f"Command integer result expected, got {type(result)}. Command: {q} with parameters: {parameters}")
             return result
         except Exception as e:
-            log().error(f"Error executing command integer", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error("Error executing command integer", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
             raise
 
     def _query_df(self, q: str, parameters: dict) -> pd.DataFrame:
         try:
             return self._client.query_df(q, parameters=parameters)
         except Exception as e:
-            log().error(f"Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error("Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
             raise
         
     def _query(self, q: str, parameters: dict) -> QueryResult:
         try:
             return self._client.query(q, parameters=parameters)
         except Exception as e:
-            log().error(f"Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error("Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
             raise
 
     def symbol_stats(self, provider: str, symbol: str) -> SymbolStats:
@@ -141,7 +139,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
                 rows_resolutions=rows_resolution
             )
         except Exception as e:
-            log().error(f"Cannot parse symbol information", LogField("provider", provider), LogField("symbol", symbol),LogField("error", e))
+            log().error("Cannot parse symbol information", LogField("provider", provider), LogField("symbol", symbol),LogField("error", e))
             raise
         
     def provider_symbols_stats(self, provider: str) -> List[SymbolStats]:
@@ -246,7 +244,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         try:
             data = self._validate_data(data)
         except Exception as e:
-            log().error(f"Error validating data", LogField("error", e))
+            log().error("Error validating data", LogField("error", e))
             raise
 
         data['state'] = self._ORIGINAL_STATE        

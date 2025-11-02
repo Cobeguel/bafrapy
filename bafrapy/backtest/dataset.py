@@ -7,7 +7,6 @@ from typing import Generic, Iterator, TypeVar
 
 import pandas as pd
 
-from bafrapy.datawarehouse.ohlcv import OHLCV
 from bafrapy.datawarehouse.repository import ClikhouseOHLCVRepository
 from bafrapy.logger import LoguruLogger as log
 

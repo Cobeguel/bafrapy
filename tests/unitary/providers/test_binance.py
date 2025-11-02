@@ -13,7 +13,7 @@ from responses import matchers
 
 from bafrapy.libs.datetime import normalize_mixed_timestamp
 from bafrapy.logger.log import LoguruLogger as log
-from bafrapy.providers.base import Resolution, HTTPClient, BackoffConfig
+from bafrapy.providers.base import Resolution, BackoffConfig
 from bafrapy.providers.binance import BinanceProvider, BinanceConfig
 
 kline_rows = {
@@ -94,10 +94,10 @@ class TestBinanceConfig:
     @pytest.fixture(autouse=True)
     def setup_config(self):
         config = BinanceConfig(
-            api_base_domain="https://api.binance.com",
+            api_domain="https://api.binance.com",
             exchange_info_endpoint="api/v3/exchangeInfo",
             aggTrades_endpoint="api/v3/aggTrades",
-            api_backoff_config=BackoffConfig(
+            api_backoff=BackoffConfig(
                 timeout=10,
                 max_tries=3,
                 backoff_factor=1,
@@ -106,7 +106,7 @@ class TestBinanceConfig:
             data_vision_domain="https://data.binance.vision",
             data_daily_klines_URL="data/spot/daily/klines",
             data_monthly_klines_URL="data/spot/monthly/klines",
-            data_backoff_config=BackoffConfig(
+            data_backoff=BackoffConfig(
                 timeout=10,
                 max_tries=3,
                 backoff_factor=1,
@@ -139,10 +139,10 @@ class TestBinanceProvider:
     def setup_provider(self):
         provider_name = "test_provider_binance"
         config = BinanceConfig(
-            api_base_domain="https://api.bafrapy-test.com",
+            api_domain="https://api.bafrapy-test.com",
             exchange_info_endpoint="api/v3/exchangeInfo",
             aggTrades_endpoint="api/v3/aggTrades",
-            api_backoff_config=BackoffConfig(
+            api_backoff=BackoffConfig(
                 timeout=10,
                 max_tries=3,
                 backoff_factor=1,
@@ -151,7 +151,7 @@ class TestBinanceProvider:
             data_vision_domain="https://data.bafrapy-test.com",
             data_daily_klines_URL="data/spot/daily/klines",
             data_monthly_klines_URL="data/spot/monthly/klines",
-            data_backoff_config=BackoffConfig(
+            data_backoff=BackoffConfig(
                 timeout=10,
                 max_tries=3,
                 backoff_factor=1,
