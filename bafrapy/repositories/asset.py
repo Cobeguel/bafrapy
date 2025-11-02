@@ -12,10 +12,10 @@ class AssetRepository(CRUDRepository[Asset, str]):
         super().__init__(Asset, session)
 
     def get_by_provider(self, provider: str) -> List[Asset]:
-        return self.list(Asset.provider == provider)
+        return self.list(Asset.provider_id == provider)
 
     def get_undated_assets(self, provider: str, limit: int = 100) -> List[Asset]:
-        return self.list(Asset.provider == provider, Asset.first_date is None, limit=limit)
+        return self.list(Asset.provider_id == provider, Asset.first_date is None, limit=limit)
 
     def count_undated_assets(self, provider: str) -> int:
-        return self.count(Asset.provider == provider, Asset.first_date is None)
+        return self.count(Asset.provider_id == provider, Asset.first_date is None)
