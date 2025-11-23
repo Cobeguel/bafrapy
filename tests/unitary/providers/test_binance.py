@@ -13,7 +13,7 @@ from responses import matchers
 
 from bafrapy.libs.datetime import normalize_mixed_timestamp
 from bafrapy.logger.log import LoguruLogger as log
-from bafrapy.providers.base import Resolution, BackoffConfig
+from bafrapy.providers.base import ResolutionClient, BackoffConfig
 from bafrapy.providers.binance import BinanceProvider, BinanceConfig
 
 kline_rows = {
@@ -372,7 +372,7 @@ class TestBinanceProvider:
             content_type="application/zip"
         )
 
-        df_result = self.provider.get_day_data("BAFRAPY", datetime(2024, 5, 25).date(), Resolution("1m", 60))
+        df_result = self.provider.get_day_data("BAFRAPY", datetime(2024, 5, 25).date(), ResolutionClient("1m", 60))
 
         assert isinstance(df_result, pd.DataFrame)
         df_result.to_csv('test2.csv', index=False, header=False)

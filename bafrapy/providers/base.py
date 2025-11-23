@@ -20,7 +20,7 @@ from bafrapy.logger import LoguruLogger as log
 
 
 @define
-class Symbol():
+class SymbolClient():
     symbol: str
     base: str
     quote: str
@@ -30,12 +30,12 @@ class Symbol():
 
 
 @define
-class Resolution():
+class ResolutionClient():
     name: str
     seconds: int
 
 
-class Provider(ABC):
+class ProviderClient(ABC):
     _provider_name: str = field(alias="provider_name")
 
     @property
@@ -43,7 +43,7 @@ class Provider(ABC):
         return self._provider_name
 
     @abstractmethod
-    def list_available_symbols(self) -> List[Symbol]:
+    def list_available_symbols(self) -> List[SymbolClient]:
         ...
     @abstractmethod
     def symbol_first_date(self, symbol: str) -> datetime:
@@ -52,20 +52,24 @@ class Provider(ABC):
     def symbol_last_date(self, symbol: str) -> datetime:
         ...
     @abstractmethod
-    def get_day_data(self, symbol: str, day: date, resolution: Resolution) -> pd.DataFrame:
+    def get_day_data(self, symbol: str, day: date, resolution: ResolutionClient) -> pd.DataFrame:
         ...
     @abstractmethod
-    def get_month_data(self, symbol: str, month: date, resolution: Resolution) -> pd.DataFrame:
+    def get_month_data(self, symbol: str, month: date, resolution: ResolutionClient) -> pd.DataFrame:
         ...
 
 
-class ProviderFactory(ABC):
+class ProviderClientBuilder(ABC):
     @abstractmethod
-    def create_provider(self) -> Provider:
+    def create_provider(self) -> ProviderClient:
+        ...
+    
+    @abstractmethod
+    def get_provider_name(self) -> str:
         ...
 
 
-class ProviderConfig(ABC):
+class ProviderClientConfig(ABC):
     @abstractmethod
     def load_config(cls, key: str, content: str):
         ...

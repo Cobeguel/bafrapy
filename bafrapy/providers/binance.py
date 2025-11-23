@@ -16,10 +16,10 @@ from bafrapy.logger.log import LogField, LoguruLogger as log
 from bafrapy.providers.base import (
     BackoffConfig,
     HTTPClient,
-    Provider,
-    ProviderFactory,
-    Resolution,
-    Symbol,
+    ProviderClient,
+    ProviderClientBuilder,
+    ResolutionClient,
+    SymbolClient,
 )
 
 
@@ -68,7 +68,7 @@ class BinanceConfig():
         
 
 @define
-class BinanceProvider(Provider):
+class BinanceProvider(ProviderClient):
     _provider_name: str = field(alias="provider_name")
     _config: BinanceConfig = field(alias="config")
     _api_http_client: HTTPClient = field(init=False)
@@ -100,7 +100,7 @@ class BinanceProvider(Provider):
                     df['provider'] = self._provider_name
                     return df
 
-    def list_available_symbols(self) -> List[Symbol]:
+    def list_available_symbols(self) -> List[SymbolClient]:
         log().info("List available symbols", LogField(key="provider", value=self._provider_name))
         response = self._api_http_client.request(self._config.symbols_URL(), HTTPMethod.GET)
         body = response.json()
@@ -124,7 +124,7 @@ class BinanceProvider(Provider):
                               LogField(key="symbol", value=item['symbol']))
                 pass
 
-            symbols.append(Symbol(item['symbol'], item['baseAsset'], item['quoteAsset'], min_lot, max_lot, lot_increment))
+            symbols.append(SymbolClient(item['symbol'], item['baseAsset'], item['quoteAsset'], min_lot, max_lot, lot_increment))
 
         return symbols
 
@@ -171,7 +171,7 @@ class BinanceProvider(Provider):
 
         return last_date
 
-    def get_day_data(self, symbol: str, day: date, resolution: Resolution) -> pd.DataFrame:
+    def get_day_data(self, symbol: str, day: date, resolution: ResolutionClient) -> pd.DataFrame:
         log().info("Getting day data", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol), LogField(key="day", value=day), LogField(key="resolution", value=resolution.name))
         response = self._data_http_client.request(self._config.data_daily_URL(symbol, resolution.name, day.year, day.month, day.day), HTTPMethod.GET)
         data = self._process_CSV_OHLCV(response.content, symbol, resolution.seconds)
@@ -179,7 +179,7 @@ class BinanceProvider(Provider):
         return data
 
     
-    def get_month_data(self, symbol: str, month: date, resolution: Resolution) -> pd.DataFrame:
+    def get_month_data(self, symbol: str, month: date, resolution: ResolutionClient) -> pd.DataFrame:
         log().info("Getting month data", LogField(key="provider", value=self._provider_name), LogField(key="symbol", value=symbol), LogField(key="month", value=month), LogField(key="resolution", value=resolution.name))
         response = self._data_http_client.request(self._config.data_monthly_URL(symbol, resolution.name, month.year, month.month), HTTPMethod.GET)
         data = self._process_CSV_OHLCV(response.content, symbol, resolution.seconds)
@@ -188,11 +188,12 @@ class BinanceProvider(Provider):
 
 
 @define
-class BinanceFactory(ProviderFactory):
-    _provider_name: str = field(alias="provider_name")
-    _config: BinanceConfig = field(alias="config")
+class BinanceFactory(ProviderClientBuilder):
+    provider_name: str
+    config: BinanceConfig
 
     def create_provider(self) -> BinanceProvider:
-        return BinanceProvider(self._provider_name, self._config)
+        return BinanceProvider(self.provider_name, self.config)
 
-
+    def get_provider_name(self) -> str:
+        return self.provider_name
