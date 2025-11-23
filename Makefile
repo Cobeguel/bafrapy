@@ -21,13 +21,13 @@ local-env:
 	cp .env.example .env
 
 lint:
-	ruff check .
+	uv run ruff check .
 
 tests:
 	uv run -m pytest -q
 
 tidy:
-	isort bafrapy
+	uv run isort bafrapy workflows
 
 compile-generator:
 	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall
