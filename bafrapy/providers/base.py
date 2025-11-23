@@ -16,7 +16,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from bafrapy.logger import LoguruLogger as log
+from bafrapy.logger import LoguruLogger as log, LogField
 
 
 @define
@@ -97,6 +97,8 @@ class HTTPClient():
         prepared = self._session.prepare_request(req)
         log().debug(f"Requesting {prepared.url}")
         response = self._session.send(prepared, timeout=self._backoff_config.timeout)
+        if response.status_code >= 400 and response.status_code < 600:
+            log().error("Request failed", LogField("status_code", response.status_code), LogField("url", prepared.url))
         if raisable:
             response.raise_for_status()
         log().debug(f"Response {response.status_code} from {prepared.url}")
