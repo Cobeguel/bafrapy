@@ -4,14 +4,14 @@ from typing import List
 
 import pandas as pd
 
-from bafrapy.providers.base import Provider, Resolution, Symbol
+from bafrapy.providers.base import ProviderClient, ResolutionClient, SymbolClient
 
 
-class ProviderMock(Provider):
-    def list_available_symbols(self) -> List[Symbol]:
+class ProviderMock(ProviderClient):
+    def list_available_symbols(self) -> List[SymbolClient]:
         return [
-            Symbol(symbol="BTCUSDT", base="BTC", quote="USDT", min_lot=Decimal("0.0001")),
-            Symbol(symbol="ETHUSDT", base="ETH", quote="USDT", min_lot=Decimal("0.01")),
+            SymbolClient(symbol="BTCUSDT", base="BTC", quote="USDT", min_lot=Decimal("0.0001")),
+            SymbolClient(symbol="ETHUSDT", base="ETH", quote="USDT", min_lot=Decimal("0.01")),
         ]
 
     def symbol_first_date(self, symbol: str) -> datetime:
@@ -20,7 +20,7 @@ class ProviderMock(Provider):
     def symbol_last_date(self, symbol: str) -> datetime:
         return datetime(2025, 1, 1)
 
-    def get_day_data(self, symbol: str, day: date, resolution: Resolution) -> pd.DataFrame:
+    def get_day_data(self, symbol: str, day: date, resolution: ResolutionClient) -> pd.DataFrame:
         return pd.DataFrame({
             "timestamp": [datetime.combine(day, datetime.min.time())],
             "open": [Decimal(100.00)],
@@ -30,7 +30,7 @@ class ProviderMock(Provider):
             "volume": [Decimal(123.45)]
         })
 
-    def get_month_data(self, symbol: str, month: date, resolution: Resolution) -> pd.DataFrame:
+    def get_month_data(self, symbol: str, month: date, resolution: ResolutionClient) -> pd.DataFrame:
         return pd.DataFrame({
             "timestamp": [datetime.combine(month, datetime.min.time())],
             "open": [Decimal(100.00)],
