@@ -1,5 +1,10 @@
 .PHONY: tests
 
+build:
+	uv pip install -e .
+	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall
+
+
 serve:
 	docker compose down
 	docker compose up -d
