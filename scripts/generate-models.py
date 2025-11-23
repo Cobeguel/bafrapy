@@ -16,7 +16,7 @@ cmd = [
     sys.executable,
     "-m",
     "sqlacodegen",
-    "--generator", "foreign_key_id_suffix",
+    "--generator", "bafrapy_sqlmodel",
     "--options", "use_inflect",
     "--tables", ",".join(tables),
     "--outfile", "bafrapy/models/generated.py",

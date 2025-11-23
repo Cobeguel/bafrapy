@@ -1,7 +1,7 @@
 [project]
 name = "bafrapy_sqlcodegen"
 version = "0.1.0"
-description = "Custom SQLModel generator that renames FK columns to *_id"
+description = "Opinionated generators from sqlacodegen"
 requires-python = ">=3.10"
 dependencies = ["sqlacodegen>=3.1.0"]
 
@@ -10,4 +10,5 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project.entry-points."sqlacodegen.generators"]
-foreign_key_id_suffix = "bafrapy_sqlcodegen.generator:ForeignKeyIdSuffixGenerator"
+bafrapy_declarative = "bafrapy_sqlcodegen.generator:BafrapyDeclarativeGenerator"
+bafrapy_sqlmodel = "bafrapy_sqlcodegen.generator:BafrapySQLModelGenerator"
