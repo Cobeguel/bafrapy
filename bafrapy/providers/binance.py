@@ -97,6 +97,7 @@ class BinanceProvider(ProviderClient):
                     df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
                     df['time'] = pd.to_datetime(df['time'].apply(normalize_mixed_timestamp), utc=True)
                     df['resolution'] = resolution
+                    df['symbol'] = symbol
                     df['provider'] = self._provider_name
                     return df
 
