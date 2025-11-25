@@ -6,6 +6,7 @@ from typing import Iterator, List
 import pandas as pd
 
 from attrs import define, field
+from clickhouse_connect import create_client
 from clickhouse_connect.driver.client import Client
 from clickhouse_connect.driver.query import QueryResult
 from pandas.tseries.frequencies import to_offset
@@ -304,3 +305,14 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         '''
         self._client.command(q)
 
+@define
+class OHLCVRepositoryBuilder():
+    host: str
+    port: int
+    username: str
+    password: str
+    database: str
+
+    def build(self) -> ClikhouseOHLCVRepository:
+        client = create_client(host=self.host, port=self.port, username=self.username, password=self.password, database=self.database)
+        return ClikhouseOHLCVRepository(client=client)
