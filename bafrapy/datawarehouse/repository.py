@@ -217,7 +217,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
 
     def symbol_availability(self, provider: str, symbol: str, resolution: int) -> SymbolAvailability:
         q = ''' 
-            SELECT MIN(time), MAX(time) from crypto_ohlcv 
+            SELECT minOrNull(time), maxOrNull(time) from crypto_ohlcv 
             WHERE provider={provider:String} 
                 AND symbol={symbol:String} 
                 AND resolution={resolution:Int}
@@ -232,9 +232,15 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         try:
             begin = result.result_rows[0][0]
             end = result.result_rows[0][1]
+            if begin is not None:
+                begin = begin.date()
+            if end is not None:
+                end = end.date()
         except IndexError:
-            return (None, None)
-        return (begin, end)
+            log().warning("No availability found for provider, symbol and resolution", LogField("provider", provider), LogField("symbol", symbol), LogField("resolution", resolution))
+            return None
+        log().info("Symbol availability found", LogField("provider", provider), LogField("symbol", symbol), LogField("resolution", resolution), LogField("first_date", begin), LogField("last_date", end))
+        return SymbolAvailability(provider=provider, symbol=symbol, resolution=resolution, first_date=begin, last_date=end)
     
     def insert_data(self, data: pd.DataFrame, fill_gaps: bool = False):
         if len(data) == 0:
@@ -293,3 +299,4 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
             OPTIMIZE TABLE crypto_ohlcv PARTITION tuple('{provider}', '{symbol}') FINAL DEDUPLICATE
         '''
         self._client.command(q)
+
