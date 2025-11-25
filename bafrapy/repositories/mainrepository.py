@@ -1,8 +1,10 @@
 from typing import Callable
 
 from attrs import define, field
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
+from bafrapy.logger import LogField, LoguruLogger as log
 from bafrapy.repositories.asset import AssetRepository
 from bafrapy.repositories.provider import ProviderRepository
 from bafrapy.repositories.resolution import ResolutionRepository
@@ -54,3 +56,17 @@ class MainRepository:
 
     def start_session(self) -> UnitOfWorkContext:
         return UnitOfWorkContext(session=self.session_factory())
+
+
+@define
+class MainRepositoryBuilder:
+    dsn: str
+
+    def build(self) -> MainRepository:
+        try:
+            engine = create_engine(self.dsn)
+            session_factory = sessionmaker(bind=engine)
+            return MainRepository(session_factory=session_factory)
+        except Exception as e:
+            log().error("Error building main repository", LogField("error", e))
+            raise
