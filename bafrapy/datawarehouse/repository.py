@@ -202,15 +202,19 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
     def count_rows(self, provider: str = "", symbol: str = "", resolution: int = 0) -> int:
         q = 'SELECT count(*) FROM crypto_ohlcv'
         parameters = {}
+        filters = []
         if provider is not None and provider != '':
-            q += ' WHERE provider={provider:String}'
+            filters.append('provider={provider:String}')
             parameters['provider'] = provider
         if symbol is not None and symbol != '':
-            q += ' WHERE symbol={symbol:String}'
+            filters.append('symbol={symbol:String}')
             parameters['symbol'] = symbol
         if resolution is not None and resolution != 0:
-            q += ' WHERE resolution={resolution:Int}'
+            filters.append('resolution={resolution:Int}')
             parameters['resolution'] = resolution
+        
+        if len(filters) > 0:
+            q += ' WHERE ' + ' AND '.join(filters)
 
         log().debug(f"Counting rows for query: {q} with parameters: {parameters}")
         return self._command_int(q, parameters)
