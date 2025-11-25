@@ -38,6 +38,7 @@ class Resolution(SQLModel, table=True):
     status: str = Field(sa_column=Column('status', String(255), nullable=False, server_default=text("'ACTIVE'")))
     display_name: Optional[str] = Field(default=None, sa_column=Column('display_name', String(255)))
     seconds: Optional[int] = Field(default=None, sa_column=Column('seconds', Integer))
+    provider_display: Optional[str] = Field(default=None, sa_column=Column('provider_display', String(255)))
 
     providers_resolutions: list['ProvidersResolution'] = Relationship(back_populates='resolution')
 
@@ -51,13 +52,13 @@ class Asset(SQLModel, table=True):
 
     id: str = Field(sa_column=Column('id', CHAR(36), primary_key=True))
     status: str = Field(sa_column=Column('status', String(255), nullable=False, server_default=text("'ACTIVE'")))
+    symbol: str = Field(sa_column=Column('symbol', String(255), nullable=False))
     display_name: Optional[str] = Field(default=None, sa_column=Column('display_name', String(255)))
     base: Optional[str] = Field(default=None, sa_column=Column('base', String(255)))
     quote: Optional[str] = Field(default=None, sa_column=Column('quote', String(255)))
     first_date: Optional[datetime.datetime] = Field(default=None, sa_column=Column('first_date', DateTime))
     last_date: Optional[datetime.datetime] = Field(default=None, sa_column=Column('last_date', DateTime))
     provider_id: Optional[str] = Field(default=None, sa_column=Column('provider', CHAR(36)))
-    symbol: Optional[str] = Field(default=None, sa_column=Column('symbol', String(255)))
 
     provider: Optional['Provider'] = Relationship(back_populates='assets')
 
