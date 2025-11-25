@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, List, Optional, TypeVar
-from sqlmodel import SQLModel
 
+from sqlmodel import SQLModel
 
 T = TypeVar('T', bound=SQLModel)
 ID = TypeVar('ID')

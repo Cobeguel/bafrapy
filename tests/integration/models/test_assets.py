@@ -45,3 +45,28 @@ class TestAssetIntegration(IntegrationTestDB):
         assert result_archived is not None
         assert result_archived.status == "ARCHIVED"
         assert result_archived.display_name == "Binance"
+
+
+    def test_get_undated_assets(self):
+        provider_id = "BINANCE"
+        asset_id = "BTCUSDT"
+        provider = Provider(id=provider_id, display_name="Binance")
+        asset = Asset(id=asset_id, provider=provider, symbol="BTCUSDT", base="BTC", quote="USDT")
+
+        with self.main_repo.start_session() as uow:
+            uow.providers.save(provider)
+            uow.assets.save(asset)
+            uow.commit()
+
+        with self.main_repo.start_session() as uow:
+            result = uow.assets.get_undated_assets(provider_id)
+            assert result is not None
+            assert len(result) == 1
+            asset = result[0]
+            assert asset is not None
+            assert asset.first_date is None
+            assert asset.last_date is None
+            assert asset.provider.id == provider_id
+            assert asset.symbol == "BTCUSDT"
+            assert asset.base == "BTC"
+            assert asset.quote == "USDT"

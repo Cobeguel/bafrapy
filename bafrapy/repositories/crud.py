@@ -33,6 +33,9 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def get_by_external_name(self, external_name: str, archived: bool = False) -> Optional[T]:
         return self.session.query(self.model).filter(self.model.external_name == external_name, self.model.status != 'ARCHIVED' if not archived else True).first()
 
+    def get(self, *filters: any) -> Optional[T]:
+        return self.session.query(self.model).filter(*filters).first()
+
     def archive(self, instance: T) -> bool:
         instance.status = 'ARCHIVED'
         self.session.add(instance)
@@ -44,8 +47,10 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def count(self, *filters: any) -> int:
         return self.session.query(self.model).filter(*filters).count()
     
-    def list(self, *filters: any, limit: int = None, ) -> List[T]:
+    def list(self, *filters: any, limit: int = None, order_by: str = None) -> List[T]:
         query = self.session.query(self.model).filter(*filters)
+        if order_by:
+            query = query.order_by(order_by)
         if limit:
             query = query.limit(limit)
         return query.all()
