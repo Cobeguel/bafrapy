@@ -5,7 +5,7 @@ from tests.integration.base import IntegrationTestDB
 class TestProviderIntegration(IntegrationTestDB):
 
     def test_insert_provider(self):
-        provider = Provider(id="BINANCE", display_name="Binance", external_id="BINANCE")
+        provider = Provider(id="BINANCE", display_name="Binance", external_name="BINANCE")
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)
@@ -14,9 +14,9 @@ class TestProviderIntegration(IntegrationTestDB):
         with self.main_repo.start_session() as uow:
             result = uow.providers.get_by_id("BINANCE")
 
-        assert result is not None
-        assert result.id == "BINANCE"
-        assert result.display_name == "Binance"
+            assert result is not None
+            assert result.external_name == "BINANCE"
+            assert result.display_name == "Binance"
 
     def test_archive_provider(self):
         provider = Provider(id="BINANCE", display_name="Binance")
@@ -33,9 +33,8 @@ class TestProviderIntegration(IntegrationTestDB):
             result_filtered = uow.providers.get_by_id("BINANCE")
             result_archived = uow.providers.get_by_id("BINANCE", archived=True)
 
-        assert result_filtered is None
-        assert result_archived is not None
-        assert result_archived.status == "ARCHIVED"
-        assert result_archived.display_name == "Binance"
+            assert result_filtered is None
+            assert result_archived is not None
+            assert result_archived.status == "ARCHIVED"
+            assert result_archived.display_name == "Binance"
 
-    

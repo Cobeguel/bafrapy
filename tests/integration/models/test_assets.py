@@ -41,10 +41,10 @@ class TestAssetIntegration(IntegrationTestDB):
             result_filtered = uow.providers.get_by_id("BINANCE")
             result_archived = uow.providers.get_by_id("BINANCE", archived=True)
 
-        assert result_filtered is None
-        assert result_archived is not None
-        assert result_archived.status == "ARCHIVED"
-        assert result_archived.display_name == "Binance"
+            assert result_filtered is None
+            assert result_archived is not None
+            assert result_archived.status == "ARCHIVED"
+            assert result_archived.display_name == "Binance"
 
 
     def test_get_undated_assets(self):
