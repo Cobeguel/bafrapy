@@ -1,4 +1,4 @@
-from typing import List, Optional, Type
+from typing import Any, List, Optional, Type
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
@@ -33,7 +33,7 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def get_by_external_name(self, external_name: str, archived: bool = False) -> Optional[T]:
         return self.session.query(self.model).filter(self.model.external_name == external_name, self.model.status != 'ARCHIVED' if not archived else True).first()
 
-    def get(self, *filters: any) -> Optional[T]:
+    def get(self, *filters: Any) -> Optional[T]:
         return self.session.query(self.model).filter(*filters).first()
 
     def archive(self, instance: T) -> bool:
@@ -44,10 +44,10 @@ class CRUDRepository(AbstractRepository[T, ID]):
     def exists_by_id(self, id: ID) -> bool:
         return self.get_by_id(id) is not None
 
-    def count(self, *filters: any) -> int:
+    def count(self, *filters: Any) -> int:
         return self.session.query(self.model).filter(*filters).count()
     
-    def list(self, *filters: any, limit: int = None, order_by: str = None) -> List[T]:
+    def list(self, *filters: Any, limit: int = None, order_by: str = None) -> List[T]:
         query = self.session.query(self.model).filter(*filters)
         if order_by:
             query = query.order_by(order_by)

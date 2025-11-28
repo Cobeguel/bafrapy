@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar
 
 from sqlmodel import SQLModel
 
@@ -21,7 +21,7 @@ class AbstractRepository(ABC, Generic[T, ID]):
         pass
 
     @abstractmethod
-    def list(self, *filters: any) -> List[T]:
+    def list(self, *filters: Any) -> List[T]:
         pass
 
     @abstractmethod
@@ -33,5 +33,5 @@ class AbstractRepository(ABC, Generic[T, ID]):
         pass
 
     @abstractmethod
-    def count(self, *filters: any) -> int:
+    def count(self, *filters: Any) -> int:
         pass
