@@ -16,7 +16,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from bafrapy.logger import LoguruLogger as log, LogField
+from bafrapy.logger import LogField, LoguruLogger as log
 
 
 @define
