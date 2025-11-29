@@ -46,7 +46,7 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
             if not data[col].apply(lambda x: isinstance(x, Number)).all():
                 raise ValueError(f"{col} column must contain numeric values.")
 
-        if (data[numeric_cols] <= 0).any().any():
+        if (data[numeric_cols] < 0).any().any():
             raise ValueError("Resolution, open, high, low, close, and volume columns must be positive.")
 
         return data
