@@ -31,7 +31,7 @@ tests:
 	uv run -m pytest -q
 
 tidy:
-	uv run isort bafrapy workflows
+	uv run isort bafrapy bafrapy_sqlcodegen scripts workflows
 
 compile-generator:
 	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall

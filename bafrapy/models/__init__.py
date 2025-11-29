@@ -1,15 +1,12 @@
-from sqlmodel import SQLModel
-
-from bafrapy.models.generated import Asset, Provider, Resolution
+from bafrapy.models.generated import Asset, Base, Provider, Resolution
 
 # Compatibility shim
-BaseModel = SQLModel
-metadata = SQLModel.metadata
+# BaseModel = SQLModel
+BaseModel = Base
 
 __all__ = [
     "Asset",
     "Provider",
     "Resolution",
-    "BaseModel",
-    "metadata",
+    "BaseModel"
 ]

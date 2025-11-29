@@ -1,6 +1,7 @@
 import os
-import sys
 import subprocess
+import sys
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +17,7 @@ cmd = [
     sys.executable,
     "-m",
     "sqlacodegen",
-    "--generator", "bafrapy_sqlmodel",
+    "--generator", "bafrapy_declarative",
     "--options", "use_inflect",
     "--tables", ",".join(tables),
     "--outfile", "bafrapy/models/generated.py",

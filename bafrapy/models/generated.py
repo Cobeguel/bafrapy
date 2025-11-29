@@ -10,72 +10,71 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Table,
     text,
 )
 from sqlalchemy.dialects.mysql import INTEGER
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Provider(SQLModel, table=True):
+class Base(DeclarativeBase):
+    pass
+
+
+class Provider(Base):
     __tablename__ = 'providers'
 
-    id: str = Field(sa_column=Column('id', CHAR(36), primary_key=True))
-    status: str = Field(sa_column=Column('status', String(255), nullable=False, server_default=text("'ACTIVE'")))
-    display_name: Optional[str] = Field(default=None, sa_column=Column('display_name', String(255)))
-    external_name: Optional[str] = Field(default=None, sa_column=Column('external_name', String(255)))
+    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(255), nullable=False, server_default=text("'ACTIVE'"))
+    display_name: Mapped[Optional[str]] = mapped_column(String(255))
+    external_name: Mapped[Optional[str]] = mapped_column(String(255))
 
-    assets: list['Asset'] = Relationship(back_populates='provider')
-    providers_resolutions: list['ProvidersResolution'] = Relationship(back_populates='provider')
+    resolutions: Mapped[list['Resolution']] = relationship('Resolution', secondary='providers_resolutions', back_populates='providers')
+    assets: Mapped[list['Asset']] = relationship('Asset', back_populates='provider')
 
 
-class Resolution(SQLModel, table=True):
+class Resolution(Base):
     __tablename__ = 'resolutions'
     __table_args__ = (
         Index('resolutions_seconds_unique', 'seconds', unique=True),
     )
 
-    id: str = Field(sa_column=Column('id', CHAR(36), primary_key=True))
-    status: str = Field(sa_column=Column('status', String(255), nullable=False, server_default=text("'ACTIVE'")))
-    display_name: Optional[str] = Field(default=None, sa_column=Column('display_name', String(255)))
-    seconds: Optional[int] = Field(default=None, sa_column=Column('seconds', Integer))
-    provider_display: Optional[str] = Field(default=None, sa_column=Column('provider_display', String(255)))
+    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(255), nullable=False, server_default=text("'ACTIVE'"))
+    display_name: Mapped[Optional[str]] = mapped_column(String(255))
+    seconds: Mapped[Optional[int]] = mapped_column(Integer)
+    provider_display: Mapped[Optional[str]] = mapped_column(String(255))
 
-    providers_resolutions: list['ProvidersResolution'] = Relationship(back_populates='resolution')
+    providers: Mapped[list['Provider']] = relationship('Provider', secondary='providers_resolutions', back_populates='resolutions')
 
 
-class Asset(SQLModel, table=True):
+class Asset(Base):
     __tablename__ = 'assets'
     __table_args__ = (
         ForeignKeyConstraint(['provider'], ['providers.id'], ondelete='SET NULL', name='assets_provider_foreign'),
         Index('assets_provider_foreign', 'provider')
     )
 
-    id: str = Field(sa_column=Column('id', CHAR(36), primary_key=True))
-    status: str = Field(sa_column=Column('status', String(255), nullable=False, server_default=text("'ACTIVE'")))
-    symbol: str = Field(sa_column=Column('symbol', String(255), nullable=False))
-    display_name: Optional[str] = Field(default=None, sa_column=Column('display_name', String(255)))
-    base: Optional[str] = Field(default=None, sa_column=Column('base', String(255)))
-    quote: Optional[str] = Field(default=None, sa_column=Column('quote', String(255)))
-    first_date: Optional[datetime.datetime] = Field(default=None, sa_column=Column('first_date', DateTime))
-    last_date: Optional[datetime.datetime] = Field(default=None, sa_column=Column('last_date', DateTime))
-    provider_id: Optional[str] = Field(default=None, sa_column=Column('provider', CHAR(36)))
+    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True)
+    status: Mapped[str] = mapped_column(String(255), nullable=False, server_default=text("'ACTIVE'"))
+    symbol: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255))
+    base: Mapped[Optional[str]] = mapped_column(String(255))
+    quote: Mapped[Optional[str]] = mapped_column(String(255))
+    first_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    last_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    provider_id: Mapped[Optional[str]] = mapped_column('provider', CHAR(36))
 
-    provider: Optional['Provider'] = Relationship(back_populates='assets')
+    provider: Mapped[Optional['Provider']] = relationship('Provider', back_populates='assets')
 
 
-class ProvidersResolution(SQLModel, table=True):
-    __tablename__ = 'providers_resolutions'
-    __table_args__ = (
-        ForeignKeyConstraint(['providers_id'], ['providers.id'], ondelete='SET NULL', name='providers_resolutions_providers_id_foreign'),
-        ForeignKeyConstraint(['resolutions_id'], ['resolutions.id'], ondelete='SET NULL', name='providers_resolutions_resolutions_id_foreign'),
-        Index('providers_resolutions_providers_id_foreign', 'providers_id'),
-        Index('providers_resolutions_resolutions_id_foreign', 'resolutions_id')
-    )
-
-    id: int = Field(sa_column=Column('id', INTEGER, primary_key=True))
-    providers_id: Optional[str] = Field(default=None, sa_column=Column('providers_id', CHAR(36)))
-    resolutions_id: Optional[str] = Field(default=None, sa_column=Column('resolutions_id', CHAR(36)))
-    resolution_seconds: Optional[int] = Field(default=None, sa_column=Column('resolution_seconds', Integer))
-
-    provider: Optional['Provider'] = Relationship(back_populates='providers_resolutions')
-    resolution: Optional['Resolution'] = Relationship(back_populates='providers_resolutions')
+t_providers_resolutions = Table(
+    'providers_resolutions', Base.metadata,
+    Column('id', INTEGER, primary_key=True),
+    Column('providers_id', CHAR(36)),
+    Column('resolutions_id', CHAR(36)),
+    ForeignKeyConstraint(['providers_id'], ['providers.id'], ondelete='SET NULL', name='providers_resolutions_providers_id_foreign'),
+    ForeignKeyConstraint(['resolutions_id'], ['resolutions.id'], ondelete='SET NULL', name='providers_resolutions_resolutions_id_foreign'),
+    Index('providers_resolutions_providers_id_foreign', 'providers_id'),
+    Index('providers_resolutions_resolutions_id_foreign', 'resolutions_id')
+)

@@ -88,20 +88,19 @@ class DataTask:
             if asset.first_date is None:
                 raise ValueError(f"Asset {asset.id} has no first date set")
             
-            available_resolutions = provider.providers_resolutions
+            available_resolutions = provider.resolutions
 
-            for assoc in available_resolutions:
+            for resolution in available_resolutions:
                 start_date = asset.first_date.date()
                 
-                availability = self.data_repository.symbol_availability(provider.external_name, asset.symbol, assoc.resolution.seconds)
+                availability = self.data_repository.symbol_availability(provider.external_name, asset.symbol, resolution.seconds)
                 if availability is not None and availability.last_date is not None:
                     start_date = max(start_date, availability.last_date)
                     if start_date is not None:
                         start_date = start_date + timedelta(days=1)
                 # TODO: Fetch real last date from provider or handle unupdated assets
                 end_date = date.today() - timedelta(days=2)
-
-                resolution = ResolutionClient(name=assoc.resolution.provider_display, seconds=assoc.resolution.seconds)
+                resolution = ResolutionClient(name=resolution.provider_display, seconds=resolution.seconds)
                 orders_by_resolutions.append(self._generate_orders(asset.symbol, resolution, start_date, end_date))
             
 
