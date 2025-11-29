@@ -39,3 +39,4 @@ compile-generator:
 
 generate-models:
 	uv run scripts/generate-models.py
+	uv run ruff format bafrapy/models/generated.py
