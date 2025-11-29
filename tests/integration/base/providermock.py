@@ -10,8 +10,12 @@ from bafrapy.providers.base import ProviderClient, ResolutionClient, SymbolClien
 class ProviderMock(ProviderClient):
     def list_available_symbols(self) -> List[SymbolClient]:
         return [
-            SymbolClient(symbol="BTCUSDT", base="BTC", quote="USDT", min_lot=Decimal("0.0001")),
-            SymbolClient(symbol="ETHUSDT", base="ETH", quote="USDT", min_lot=Decimal("0.01")),
+            SymbolClient(
+                symbol="BTCUSDT", base="BTC", quote="USDT", min_lot=Decimal("0.0001")
+            ),
+            SymbolClient(
+                symbol="ETHUSDT", base="ETH", quote="USDT", min_lot=Decimal("0.01")
+            ),
         ]
 
     def symbol_first_date(self, symbol: str) -> datetime:
@@ -20,22 +24,30 @@ class ProviderMock(ProviderClient):
     def symbol_last_date(self, symbol: str) -> datetime:
         return datetime(2025, 1, 1)
 
-    def get_day_data(self, symbol: str, day: date, resolution: ResolutionClient) -> pd.DataFrame:
-        return pd.DataFrame({
-            "timestamp": [datetime.combine(day, datetime.min.time())],
-            "open": [Decimal(100.00)],
-            "high": [Decimal(105.00)],
-            "low": [Decimal(95.00)],
-            "close": [Decimal(102.00)],
-            "volume": [Decimal(123.45)]
-        })
+    def get_day_data(
+        self, symbol: str, day: date, resolution: ResolutionClient
+    ) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "timestamp": [datetime.combine(day, datetime.min.time())],
+                "open": [Decimal(100.00)],
+                "high": [Decimal(105.00)],
+                "low": [Decimal(95.00)],
+                "close": [Decimal(102.00)],
+                "volume": [Decimal(123.45)],
+            }
+        )
 
-    def get_month_data(self, symbol: str, month: date, resolution: ResolutionClient) -> pd.DataFrame:
-        return pd.DataFrame({
-            "timestamp": [datetime.combine(month, datetime.min.time())],
-            "open": [Decimal(100.00)],
-            "high": [Decimal(110.00)],
-            "low": [Decimal(90.00)],
-            "close": [Decimal(105.00)],
-            "volume": [Decimal(12345.67)]
-        })
+    def get_month_data(
+        self, symbol: str, month: date, resolution: ResolutionClient
+    ) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "timestamp": [datetime.combine(month, datetime.min.time())],
+                "open": [Decimal(100.00)],
+                "high": [Decimal(110.00)],
+                "low": [Decimal(90.00)],
+                "close": [Decimal(105.00)],
+                "volume": [Decimal(12345.67)],
+            }
+        )

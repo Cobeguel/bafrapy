@@ -5,7 +5,6 @@ from tests.integration.base import IntegrationTestDB
 
 
 class TestAssetIntegration(IntegrationTestDB):
-
     def test_create_asset(self):
         provider = Provider(id="BINANCE", display_name="Binance")
         id = str(uuid4())
@@ -46,12 +45,13 @@ class TestAssetIntegration(IntegrationTestDB):
             assert result_archived.status == "ARCHIVED"
             assert result_archived.display_name == "Binance"
 
-
     def test_get_undated_assets(self):
         provider_id = "BINANCE"
         asset_id = "BTCUSDT"
         provider = Provider(id=provider_id, display_name="Binance")
-        asset = Asset(id=asset_id, provider=provider, symbol="BTCUSDT", base="BTC", quote="USDT")
+        asset = Asset(
+            id=asset_id, provider=provider, symbol="BTCUSDT", base="BTC", quote="USDT"
+        )
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)

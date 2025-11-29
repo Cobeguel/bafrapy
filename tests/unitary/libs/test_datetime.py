@@ -31,7 +31,6 @@ class TestNormalizeMixedTimestamp:
 
 
 class TestTimestampFormatter:
-
     def test_timestamp_in_seconds(self):
         ts = 1748131200  # 2025-05-25 00:00:00 UTC
         dt = TimestampFormatter(ts).normalize_seconds()

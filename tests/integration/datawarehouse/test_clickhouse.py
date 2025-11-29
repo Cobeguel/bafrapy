@@ -16,11 +16,11 @@ single_integer = {
     "symbol": "test_symbol",
     "resolution": 86400,
     "time": datetime(2024, 1, 1),
-    "open": 100, 
-    "high": 110, 
-    "low": 90, 
-    "close": 105, 
-    "volume": 1000
+    "open": 100,
+    "high": 110,
+    "low": 90,
+    "close": 105,
+    "volume": 1000,
 }
 
 single_decimal = {
@@ -32,7 +32,7 @@ single_decimal = {
     "high": Decimal("110.00"),
     "low": Decimal("90.00"),
     "close": Decimal("105.00"),
-    "volume": Decimal("1000.00")
+    "volume": Decimal("1000.00"),
 }
 
 multiple_decimal = [
@@ -45,7 +45,7 @@ multiple_decimal = [
         "high": Decimal("105.00"),
         "low": Decimal("95.00"),
         "close": Decimal("105.00"),
-        "volume": Decimal("100.00")
+        "volume": Decimal("100.00"),
     },
     {
         "provider": "test_provider",
@@ -56,7 +56,7 @@ multiple_decimal = [
         "high": Decimal("110.00"),
         "low": Decimal("90.00"),
         "close": Decimal("110.00"),
-        "volume": Decimal("200.00")
+        "volume": Decimal("200.00"),
     },
     {
         "provider": "test_provider",
@@ -67,7 +67,7 @@ multiple_decimal = [
         "high": Decimal("115.00"),
         "low": Decimal("85.00"),
         "close": Decimal("115.00"),
-        "volume": Decimal("300.00")
+        "volume": Decimal("300.00"),
     },
     {
         "provider": "test_provider",
@@ -78,7 +78,7 @@ multiple_decimal = [
         "high": Decimal("120.00"),
         "low": Decimal("80.00"),
         "close": Decimal("120.00"),
-        "volume": Decimal("400.00")
+        "volume": Decimal("400.00"),
     },
     {
         "provider": "test_provider",
@@ -89,8 +89,8 @@ multiple_decimal = [
         "high": Decimal("125.00"),
         "low": Decimal("75.00"),
         "close": Decimal("125.00"),
-        "volume": Decimal("500.00")
-    }
+        "volume": Decimal("500.00"),
+    },
 ]
 
 multiple_providers = [
@@ -103,7 +103,7 @@ multiple_providers = [
         "high": Decimal("105.00"),
         "low": Decimal("95.00"),
         "close": Decimal("105.00"),
-        "volume": Decimal("100.00")
+        "volume": Decimal("100.00"),
     },
     {
         "provider": "test_provider-1",
@@ -114,7 +114,7 @@ multiple_providers = [
         "high": Decimal("110.00"),
         "low": Decimal("90.00"),
         "close": Decimal("110.00"),
-        "volume": Decimal("200.00")
+        "volume": Decimal("200.00"),
     },
     {
         "provider": "test_provider-2",
@@ -125,7 +125,7 @@ multiple_providers = [
         "high": Decimal("115.00"),
         "low": Decimal("85.00"),
         "close": Decimal("115.00"),
-        "volume": Decimal("300.00")
+        "volume": Decimal("300.00"),
     },
     {
         "provider": "test_provider-2",
@@ -136,8 +136,8 @@ multiple_providers = [
         "high": Decimal("120.00"),
         "low": Decimal("80.00"),
         "close": Decimal("120.00"),
-        "volume": Decimal("400.00")
-    }
+        "volume": Decimal("400.00"),
+    },
 ]
 
 multiple_symbols = [
@@ -150,7 +150,7 @@ multiple_symbols = [
         "high": Decimal("105.00"),
         "low": Decimal("95.00"),
         "close": Decimal("105.00"),
-        "volume": Decimal("100.00")
+        "volume": Decimal("100.00"),
     },
     {
         "provider": "test_provider",
@@ -161,7 +161,7 @@ multiple_symbols = [
         "high": Decimal("110.00"),
         "low": Decimal("90.00"),
         "close": Decimal("110.00"),
-        "volume": Decimal("200.00")
+        "volume": Decimal("200.00"),
     },
     {
         "provider": "test_provider",
@@ -172,7 +172,7 @@ multiple_symbols = [
         "high": Decimal("115.00"),
         "low": Decimal("85.00"),
         "close": Decimal("115.00"),
-        "volume": Decimal("300.00")
+        "volume": Decimal("300.00"),
     },
     {
         "provider": "test_provider",
@@ -183,8 +183,8 @@ multiple_symbols = [
         "high": Decimal("120.00"),
         "low": Decimal("80.00"),
         "close": Decimal("120.00"),
-        "volume": Decimal("400.00")
-    }
+        "volume": Decimal("400.00"),
+    },
 ]
 
 gap_data = [
@@ -197,7 +197,7 @@ gap_data = [
         "high": Decimal("105.00"),
         "low": Decimal("95.00"),
         "close": Decimal("105.00"),
-        "volume": Decimal("100.00")
+        "volume": Decimal("100.00"),
     },
     {
         "provider": "test_provider",
@@ -208,8 +208,8 @@ gap_data = [
         "high": Decimal("125.00"),
         "low": Decimal("75.00"),
         "close": Decimal("125.00"),
-        "volume": Decimal("500.00")
-    }
+        "volume": Decimal("500.00"),
+    },
 ]
 
 
@@ -219,21 +219,30 @@ class TestOHLCVRepository:
 
     def get_repo(self):
         return self.__class__.repo
-    
+
     def get_client(self):
         return self.__class__.client
 
     @pytest.fixture(scope="class", autouse=True)
     def setup_class(self):
         log().deactivate()
-        container = ClickHouseContainer("clickhouse/clickhouse-server:23.9.5-alpine", 8123, "test", "test", "bafrapy")
+        container = ClickHouseContainer(
+            "clickhouse/clickhouse-server:23.9.5-alpine",
+            8123,
+            "test",
+            "test",
+            "bafrapy",
+        )
         container.with_exposed_ports(8123)
         container.with_bind_ports(8123, 8129)
         container.start()
-        client = get_client(host=container.get_container_host_ip(), 
-                            username="test", password="test", 
-                            port=int(container.get_exposed_port(8123)),
-                            database="bafrapy")
+        client = get_client(
+            host=container.get_container_host_ip(),
+            username="test",
+            password="test",
+            port=int(container.get_exposed_port(8123)),
+            database="bafrapy",
+        )
         repo = ClikhouseOHLCVRepository(client)
         repo.initialize()
         self.__class__.repo = repo
@@ -249,21 +258,21 @@ class TestOHLCVRepository:
 
     def query_df(self, provider, symbol, resolution, start, end):
         return self.get_client().query_df(
-            '''SELECT * FROM crypto_ohlcv 
+            """SELECT * FROM crypto_ohlcv 
                 WHERE provider={provider:String} 
                     AND symbol={symbol:String} 
                     AND resolution={resolution:Int} 
                     AND time BETWEEN {start:Date} AND {end:Date}
-            ORDER BY time''',
+            ORDER BY time""",
             parameters={
                 "provider": provider,
                 "symbol": symbol,
                 "resolution": resolution,
                 "start": start,
-                "end": end
-            }
+                "end": end,
+            },
         )
-    
+
     def test_insert_empty_df(self):
         df = pd.DataFrame()
         self.repo.insert_data(df)
@@ -279,7 +288,7 @@ class TestOHLCVRepository:
             single_integer["symbol"],
             single_integer["resolution"],
             single_integer["time"].date(),
-            single_integer["time"].date()
+            single_integer["time"].date(),
         )
         assert len(result) == 1
         assert result.iloc[0]["provider"] == single_integer["provider"]
@@ -301,7 +310,7 @@ class TestOHLCVRepository:
             single_decimal["symbol"],
             single_decimal["resolution"],
             single_decimal["time"].date(),
-            single_decimal["time"].date()
+            single_decimal["time"].date(),
         )
         assert len(result) == 1
         assert result.iloc[0]["provider"] == single_decimal["provider"]
@@ -323,7 +332,7 @@ class TestOHLCVRepository:
             multiple_decimal[0]["symbol"],
             multiple_decimal[0]["resolution"],
             multiple_decimal[0]["time"].date(),
-            multiple_decimal[-1]["time"].date()
+            multiple_decimal[-1]["time"].date(),
         )
         assert len(result) == len(multiple_decimal)
 
@@ -347,7 +356,7 @@ class TestOHLCVRepository:
             gap_data[0]["symbol"],
             gap_data[0]["resolution"],
             gap_data[0]["time"].date(),
-            gap_data[-1]["time"].date()
+            gap_data[-1]["time"].date(),
         )
 
         assert len(result) == 5
@@ -372,7 +381,7 @@ class TestOHLCVRepository:
             assert result.iloc[i]["low"] == close
             assert result.iloc[i]["close"] == close
             assert result.iloc[i]["volume"] == 0
-        
+
         assert result.iloc[4]["provider"] == gap_data[1]["provider"]
         assert result.iloc[4]["symbol"] == gap_data[1]["symbol"]
         assert result.iloc[4]["resolution"] == gap_data[1]["resolution"]
@@ -397,24 +406,32 @@ class TestOHLCVRepository:
         rows = []
         for i in range(5):
             d = start_date + timedelta(days=i)
-            rows.append({
-                "provider": provider,
-                "symbol": symbol,
-                "resolution": resolution,
-                "time": d,
-                "open": base + delta * i,                  # 100, 105, 110, 115, 120
-                "high": base + delta * (i+1),              # 105, 110, 115, 120, 125
-                "low": base - delta * i,                   #  95,  90,  85,  80,  75
-                "close": base + delta * (i+1),             # 105, 110, 115, 120, 125
-                "volume": base_volume + volume_delta * i   # 100, 200, 300, 400, 500
-            })
+            rows.append(
+                {
+                    "provider": provider,
+                    "symbol": symbol,
+                    "resolution": resolution,
+                    "time": d,
+                    "open": base + delta * i,  # 100, 105, 110, 115, 120
+                    "high": base + delta * (i + 1),  # 105, 110, 115, 120, 125
+                    "low": base - delta * i,  #  95,  90,  85,  80,  75
+                    "close": base + delta * (i + 1),  # 105, 110, 115, 120, 125
+                    "volume": base_volume + volume_delta * i,  # 100, 200, 300, 400, 500
+                }
+            )
 
         df = pd.DataFrame(rows)
         assert len(df) == 5
 
         self.repo.insert_data(df)
 
-        result = self.query_df(provider, symbol, resolution, start_date.date(), start_date.date() + timedelta(days=days - 1))
+        result = self.query_df(
+            provider,
+            symbol,
+            resolution,
+            start_date.date(),
+            start_date.date() + timedelta(days=days - 1),
+        )
         assert len(result) == 5
 
         result = result.sort_values("time").reset_index(drop=True)
@@ -427,7 +444,7 @@ class TestOHLCVRepository:
             assert row["resolution"] == resolution
             assert row["time"] == expected_date
             assert row["open"] == base + delta * i
-            assert row["high"] == base + delta * (i+1)
+            assert row["high"] == base + delta * (i + 1)
             assert row["low"] == base - delta * i
-            assert row["close"] == base + delta * (i+1)
+            assert row["close"] == base + delta * (i + 1)
             assert row["volume"] == base_volume + volume_delta * i

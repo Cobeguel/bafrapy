@@ -37,19 +37,27 @@ if __name__ == "__main__":
     CH_PORT = os.getenv("CH_EXTERNAL_PORT", "8123")
     CH_HOST = os.getenv("CH_HOST", "localhost")
 
-    data_repository_builder = OHLCVRepositoryBuilder(host=CH_HOST, port=CH_PORT, username=CH_USER, password=CH_PASSWORD, database=CH_DATABASE)
+    data_repository_builder = OHLCVRepositoryBuilder(
+        host=CH_HOST,
+        port=CH_PORT,
+        username=CH_USER,
+        password=CH_PASSWORD,
+        database=CH_DATABASE,
+    )
 
     provider_builders = []
 
-    binance_config_file = json.loads(Path("config/providers/binance.json").read_text(encoding="utf-8"))
-    binance_config = structure(binance_config_file, BinanceConfig)
-    binance_builder = BinanceFactory(
-        provider_name="BINANCE",
-        config=binance_config
+    binance_config_file = json.loads(
+        Path("config/providers/binance.json").read_text(encoding="utf-8")
     )
+    binance_config = structure(binance_config_file, BinanceConfig)
+    binance_builder = BinanceFactory(provider_name="BINANCE", config=binance_config)
     provider_builders.append(binance_builder)
 
-    providers = {builder.provider_name: builder.create_provider() for builder in provider_builders}
+    providers = {
+        builder.provider_name: builder.create_provider()
+        for builder in provider_builders
+    }
 
     worker = Worker.bind(
         data_repository_builder=data_repository_builder,
@@ -60,4 +68,3 @@ if __name__ == "__main__":
     api = ApiDeployment.bind(worker_handler=worker)
 
     serve.run(api, blocking=True)
-    

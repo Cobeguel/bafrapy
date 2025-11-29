@@ -23,31 +23,49 @@ from bafrapy.logger.log import LogField, LoguruLogger as log
 
 @define
 class ClikhouseOHLCVRepository(OHLCVRepository):
-    _client: Client = field(alias='client')
+    _client: Client = field(alias="client")
 
     def _validate_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        columns = set(['provider', 'symbol', 'resolution', 'time', 'open', 'high', 'low', 'close', 'volume'])
+        columns = set(
+            [
+                "provider",
+                "symbol",
+                "resolution",
+                "time",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+            ]
+        )
 
         if not columns.issubset(data.columns):
-            raise ValueError(f"The dataframe is missing the following columns: {columns - set(data.columns)}")
-        
-        if not pd.api.types.is_integer_dtype(data['resolution']):
+            raise ValueError(
+                f"The dataframe is missing the following columns: {columns - set(data.columns)}"
+            )
+
+        if not pd.api.types.is_integer_dtype(data["resolution"]):
             raise ValueError("Resolution column must be an integer.")
-        
-        if not pd.api.types.is_datetime64_any_dtype(data['time']):
+
+        if not pd.api.types.is_datetime64_any_dtype(data["time"]):
             try:
-                data['time'] = pd.to_datetime(data['time'].apply(normalize_mixed_timestamp), utc=True)
+                data["time"] = pd.to_datetime(
+                    data["time"].apply(normalize_mixed_timestamp), utc=True
+                )
             except Exception:
                 log().error("Error converting time column to datetime ")
                 raise
-        
-        numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+
+        numeric_cols = ["open", "high", "low", "close", "volume"]
         for col in numeric_cols:
             if not data[col].apply(lambda x: isinstance(x, Number)).all():
                 raise ValueError(f"{col} column must contain numeric values.")
 
         if (data[numeric_cols] < 0).any().any():
-            raise ValueError("Resolution, open, high, low, close, and volume columns must be positive.")
+            raise ValueError(
+                "Resolution, open, high, low, close, and volume columns must be positive."
+            )
 
         return data
 
@@ -55,37 +73,47 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         if len(data) == 0:
             return pd.DataFrame()
 
-        resolution_distinct = data['resolution'].nunique()
+        resolution_distinct = data["resolution"].nunique()
         if resolution_distinct != 1:
-            raise ValueError(f"Resolution is not constant in dataset. {resolution_distinct} distinct values found. Cannot fill gaps.")
+            raise ValueError(
+                f"Resolution is not constant in dataset. {resolution_distinct} distinct values found. Cannot fill gaps."
+            )
 
-        resample_offset = to_offset(timedelta(seconds=int(data['resolution'].iloc[0])))
+        resample_offset = to_offset(timedelta(seconds=int(data["resolution"].iloc[0])))
 
-        data.set_index('time', inplace=True)
+        data.set_index("time", inplace=True)
         resampled_data = data.resample(resample_offset).asfreq()
-        resampled_data['provider'] = data['provider'].iloc[0]
-        resampled_data['symbol'] = data['symbol'].iloc[0]
-        resampled_data['resolution'] = data['resolution'].iloc[0]
+        resampled_data["provider"] = data["provider"].iloc[0]
+        resampled_data["symbol"] = data["symbol"].iloc[0]
+        resampled_data["resolution"] = data["resolution"].iloc[0]
 
-        resampled_data['close'] = resampled_data['close'].ffill()
-        resampled_data['open'] = resampled_data['open'].fillna(resampled_data['close'])
-        resampled_data['high'] = resampled_data['high'].fillna(resampled_data['close'])
-        resampled_data['low'] = resampled_data['low'].fillna(resampled_data['close'])
-        resampled_data['volume'] = resampled_data['volume'].fillna(0)
+        resampled_data["close"] = resampled_data["close"].ffill()
+        resampled_data["open"] = resampled_data["open"].fillna(resampled_data["close"])
+        resampled_data["high"] = resampled_data["high"].fillna(resampled_data["close"])
+        resampled_data["low"] = resampled_data["low"].fillna(resampled_data["close"])
+        resampled_data["volume"] = resampled_data["volume"].fillna(0)
 
-        resampled_data['state'] = resampled_data['state'].fillna(self._GAP_STATE)
+        resampled_data["state"] = resampled_data["state"].fillna(self._GAP_STATE)
 
         resampled_data.reset_index(inplace=True)
         return resampled_data
 
     def initialize(self):
-         with resources.files('bafrapy.datawarehouse').joinpath('ch_schema.sql').open('r', encoding='utf-8') as f:
+        with (
+            resources.files("bafrapy.datawarehouse")
+            .joinpath("ch_schema.sql")
+            .open("r", encoding="utf-8") as f
+        ):
             file = f.read()
-            queries = file.split(';')
+            queries = file.split(";")
             if len(queries) == 0:
                 self._client.command(file)
             for query in queries:
-                if query.strip() == '' or query.strip().startswith('/*') or query.strip().startswith('--'):
+                if (
+                    query.strip() == ""
+                    or query.strip().startswith("/*")
+                    or query.strip().startswith("--")
+                ):
                     continue
                 log().debug(f"Running query: {query}")
                 self._client.command(query)
@@ -94,144 +122,176 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
         try:
             result = self._client.command(q, parameters=parameters)
             if not isinstance(result, int):
-                raise ValueError(f"Command integer result expected, got {type(result)}. Command: {q} with parameters: {parameters}")
+                raise ValueError(
+                    f"Command integer result expected, got {type(result)}. Command: {q} with parameters: {parameters}"
+                )
             return result
         except Exception as e:
-            log().error("Error executing command integer", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error(
+                "Error executing command integer",
+                LogField("query", q),
+                LogField("parameters", parameters),
+                LogField("error", e),
+            )
             raise
 
     def _query_df(self, q: str, parameters: dict) -> pd.DataFrame:
         try:
             return self._client.query_df(q, parameters=parameters)
         except Exception as e:
-            log().error("Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error(
+                "Error executing query",
+                LogField("query", q),
+                LogField("parameters", parameters),
+                LogField("error", e),
+            )
             raise
-        
+
     def _query(self, q: str, parameters: dict) -> QueryResult:
         try:
             return self._client.query(q, parameters=parameters)
         except Exception as e:
-            log().error("Error executing query", LogField("query", q), LogField("parameters", parameters), LogField("error", e))
+            log().error(
+                "Error executing query",
+                LogField("query", q),
+                LogField("parameters", parameters),
+                LogField("error", e),
+            )
             raise
 
     def symbol_stats(self, provider: str, symbol: str) -> SymbolStats:
-        q = '''
+        q = """
             SELECT provider, symbol, resolution, count(*) AS `num rows` 
             FROM crypto_ohlcv 
             WHERE provider={provider:String} 
                 AND symbol={symbol:String} 
             GROUP BY provider, symbol, resolution 
             ORDER BY provider, symbol, resolution
-        '''
-        parameters = {'provider': provider, 'symbol': symbol}
+        """
+        parameters = {"provider": provider, "symbol": symbol}
 
-        result =  self._query(q, parameters)
+        result = self._query(q, parameters)
         try:
             rows_resolution = []
             for row in result.result_rows:
-                rows_resolution.append(RowsResolution(
-                    resolution=row[2],
-                    num_rows=row[3],
-                ))
+                rows_resolution.append(
+                    RowsResolution(
+                        resolution=row[2],
+                        num_rows=row[3],
+                    )
+                )
 
             return SymbolStats(
                 provider=result.result_rows[0][0],
                 symbol=result.result_rows[0][1],
-                rows_resolutions=rows_resolution
+                rows_resolutions=rows_resolution,
             )
         except Exception as e:
-            log().error("Cannot parse symbol information", LogField("provider", provider), LogField("symbol", symbol),LogField("error", e))
+            log().error(
+                "Cannot parse symbol information",
+                LogField("provider", provider),
+                LogField("symbol", symbol),
+                LogField("error", e),
+            )
             raise
-        
+
     def provider_symbols_stats(self, provider: str) -> List[SymbolStats]:
-        q = '''
+        q = """
             SELECT provider, symbol, resolution, count(*) AS `num rows` 
             FROM crypto_ohlcv 
             WHERE provider={provider:String}
             GROUP BY provider, symbol, resolution
             ORDER BY provider, symbol, resolution
-        '''
-        parameters = {'provider': provider}
+        """
+        parameters = {"provider": provider}
 
-        result =  self._query_df(q, parameters)
-        grouped = result.groupby(['provider', 'symbol'])
+        result = self._query_df(q, parameters)
+        grouped = result.groupby(["provider", "symbol"])
 
         results = []
         for (provider, symbol), data in grouped:
             resolution_stats = []
             for _, row in data.iterrows():
-                resolution_stats.append(RowsResolution(
-                    resolution=row['resolution'],
-                    num_rows=row['num rows']
-                ))
-            results.append(SymbolStats(provider=provider, symbol=symbol, rows_resolutions=resolution_stats))
+                resolution_stats.append(
+                    RowsResolution(
+                        resolution=row["resolution"], num_rows=row["num rows"]
+                    )
+                )
+            results.append(
+                SymbolStats(
+                    provider=provider, symbol=symbol, rows_resolutions=resolution_stats
+                )
+            )
 
         return results
 
     def list_providers(self) -> List[str]:
-        q = '''
+        q = """
             SELECT DISTINCT provider FROM crypto_ohlcv 
             ORDER BY provider
-        '''
-        return self._query_df(q, parameters={})['provider'].tolist()
+        """
+        return self._query_df(q, parameters={})["provider"].tolist()
 
     def list_symbols(self, provider: str) -> List[str]:
-        q = '''
+        q = """
             SELECT DISTINCT symbol FROM crypto_ohlcv 
             WHERE provider={provider:String} 
             ORDER BY symbol
-        '''
-        parameters = {'provider': provider}
-        return self._query_df(q, parameters)['symbol'].tolist()
+        """
+        parameters = {"provider": provider}
+        return self._query_df(q, parameters)["symbol"].tolist()
 
-    def get_by_range(self, provider: str, symbol: str, resolution: int, start: date, end: date) -> pd.DataFrame:
+    def get_by_range(
+        self, provider: str, symbol: str, resolution: int, start: date, end: date
+    ) -> pd.DataFrame:
         return self._query_df(
-            '''SELECT * FROM crypto_ohlcv 
+            """SELECT * FROM crypto_ohlcv 
                 WHERE provider={provider:String} 
                     AND symbol={symbol:String} 
                     AND resolution={resolution:Int} 
                     AND time BETWEEN {start:Date} AND {end:Date} 
-            ORDER BY time''',
+            ORDER BY time""",
             parameters={
-                'provider': provider,
-                'symbol': symbol,
-                'resolution': resolution,
-                'start': start,
-                'end': end
-            })
-    
-    def count_rows(self, provider: str = "", symbol: str = "", resolution: int = 0) -> int:
-        q = 'SELECT count(*) FROM crypto_ohlcv'
+                "provider": provider,
+                "symbol": symbol,
+                "resolution": resolution,
+                "start": start,
+                "end": end,
+            },
+        )
+
+    def count_rows(
+        self, provider: str = "", symbol: str = "", resolution: int = 0
+    ) -> int:
+        q = "SELECT count(*) FROM crypto_ohlcv"
         parameters = {}
         filters = []
-        if provider is not None and provider != '':
-            filters.append('provider={provider:String}')
-            parameters['provider'] = provider
-        if symbol is not None and symbol != '':
-            filters.append('symbol={symbol:String}')
-            parameters['symbol'] = symbol
+        if provider is not None and provider != "":
+            filters.append("provider={provider:String}")
+            parameters["provider"] = provider
+        if symbol is not None and symbol != "":
+            filters.append("symbol={symbol:String}")
+            parameters["symbol"] = symbol
         if resolution is not None and resolution != 0:
-            filters.append('resolution={resolution:Int}')
-            parameters['resolution'] = resolution
-        
+            filters.append("resolution={resolution:Int}")
+            parameters["resolution"] = resolution
+
         if len(filters) > 0:
-            q += ' WHERE ' + ' AND '.join(filters)
+            q += " WHERE " + " AND ".join(filters)
 
         log().debug(f"Counting rows for query: {q} with parameters: {parameters}")
         return self._command_int(q, parameters)
 
-    def symbol_availability(self, provider: str, symbol: str, resolution: int) -> SymbolAvailability:
-        q = ''' 
+    def symbol_availability(
+        self, provider: str, symbol: str, resolution: int
+    ) -> SymbolAvailability:
+        q = """ 
             SELECT minOrNull(time), maxOrNull(time) from crypto_ohlcv 
             WHERE provider={provider:String} 
                 AND symbol={symbol:String} 
                 AND resolution={resolution:Int}
-        '''
-        parameters = {
-            'provider': provider,
-            'symbol': symbol,
-            'resolution': resolution
-        }
+        """
+        parameters = {"provider": provider, "symbol": symbol, "resolution": resolution}
         result = self._client.query(q, parameters)
         begin, end = None, None
         try:
@@ -242,57 +302,77 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
             if end is not None:
                 end = end.date()
         except IndexError:
-            log().warning("No availability found for provider, symbol and resolution", LogField("provider", provider), LogField("symbol", symbol), LogField("resolution", resolution))
+            log().warning(
+                "No availability found for provider, symbol and resolution",
+                LogField("provider", provider),
+                LogField("symbol", symbol),
+                LogField("resolution", resolution),
+            )
             return None
-        log().info("Symbol availability found", LogField("provider", provider), LogField("symbol", symbol), LogField("resolution", resolution), LogField("first_date", begin), LogField("last_date", end))
-        return SymbolAvailability(provider=provider, symbol=symbol, resolution=resolution, first_date=begin, last_date=end)
-    
+        log().info(
+            "Symbol availability found",
+            LogField("provider", provider),
+            LogField("symbol", symbol),
+            LogField("resolution", resolution),
+            LogField("first_date", begin),
+            LogField("last_date", end),
+        )
+        return SymbolAvailability(
+            provider=provider,
+            symbol=symbol,
+            resolution=resolution,
+            first_date=begin,
+            last_date=end,
+        )
+
     def insert_data(self, data: pd.DataFrame, fill_gaps: bool = False):
         if len(data) == 0:
             log().warning("Inserting empty dataframe into Clickhouse. Nothing to do")
             return
-        
+
         try:
             data = self._validate_data(data)
         except Exception as e:
             log().error("Error validating data", LogField("error", e))
             raise
 
-        data['state'] = self._ORIGINAL_STATE        
-        resolution_value = data['resolution'].iloc[0]
+        data["state"] = self._ORIGINAL_STATE
+        resolution_value = data["resolution"].iloc[0]
         if pd.isna(resolution_value) or resolution_value < 1:
             raise ValueError("Invalid resolution value. Must be a positive integer.")
         if fill_gaps:
             data = self._fill_gaps(data)
 
-        self._client.insert_df('crypto_ohlcv', data)
+        self._client.insert_df("crypto_ohlcv", data)
 
-    def get_by_range_stream(self, provider: str, symbol: str, resolution: int, start: date, end: date) -> Iterator[pd.DataFrame]:
-        q = '''
+    def get_by_range_stream(
+        self, provider: str, symbol: str, resolution: int, start: date, end: date
+    ) -> Iterator[pd.DataFrame]:
+        q = """
             SELECT * FROM crypto_ohlcv
             WHERE provider={provider:String}
                 AND symbol={symbol:String}
                 AND resolution={resolution:Int}
                 AND time BETWEEN {start:Date} AND {end:Date}
             ORDER BY time
-        '''
+        """
         parameters = {
-            'provider': provider,
-            'symbol': symbol,
-            'resolution': resolution,
-            'start': start,
-            'end': end
+            "provider": provider,
+            "symbol": symbol,
+            "resolution": resolution,
+            "start": start,
+            "end": end,
         }
         settings = {
-            'max_block_size': 2**30,            # default 2^16
-            'preferred_block_size_bytes': 2**30 # default 2^20 
+            "max_block_size": 2**30,  # default 2^16
+            "preferred_block_size_bytes": 2**30,  # default 2^20
         }
         df_stream = self._client.query_df_stream(q, parameters, settings)
 
         with df_stream:
-                for df in df_stream:
-                    df.set_index(df.columns[0], inplace=True)
-                    yield df
+            for df in df_stream:
+                df.set_index(df.columns[0], inplace=True)
+                yield df
 
     def clean_or_optimize_provider(self, provider: str):
         symbols = self.list_symbols(provider)
@@ -300,13 +380,14 @@ class ClikhouseOHLCVRepository(OHLCVRepository):
             self.clean_or_optimize_symbol(provider, symbol)
 
     def clean_or_optimize_symbol(self, provider: str, symbol: str):
-        q = f'''
+        q = f"""
             OPTIMIZE TABLE crypto_ohlcv PARTITION tuple('{provider}', '{symbol}') FINAL DEDUPLICATE
-        '''
+        """
         self._client.command(q)
 
+
 @define
-class OHLCVRepositoryBuilder():
+class OHLCVRepositoryBuilder:
     host: str
     port: int
     username: str
@@ -314,5 +395,11 @@ class OHLCVRepositoryBuilder():
     database: str
 
     def build(self) -> ClikhouseOHLCVRepository:
-        client = create_client(host=self.host, port=self.port, username=self.username, password=self.password, database=self.database)
+        client = create_client(
+            host=self.host,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            database=self.database,
+        )
         return ClikhouseOHLCVRepository(client=client)

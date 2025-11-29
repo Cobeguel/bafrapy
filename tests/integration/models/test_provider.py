@@ -3,9 +3,10 @@ from tests.integration.base import IntegrationTestDB
 
 
 class TestProviderIntegration(IntegrationTestDB):
-
     def test_insert_provider(self):
-        provider = Provider(id="BINANCE", display_name="Binance", external_name="BINANCE")
+        provider = Provider(
+            id="BINANCE", display_name="Binance", external_name="BINANCE"
+        )
 
         with self.main_repo.start_session() as uow:
             uow.providers.save(provider)
@@ -37,7 +38,6 @@ class TestProviderIntegration(IntegrationTestDB):
             assert result_archived is not None
             assert result_archived.status == "ARCHIVED"
             assert result_archived.display_name == "Binance"
-
 
     def test_add_resolution_to_provider(self):
         provider = Provider(id="BINANCE", display_name="Binance")

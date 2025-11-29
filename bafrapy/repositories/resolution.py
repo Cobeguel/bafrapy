@@ -5,6 +5,5 @@ from bafrapy.repositories.crud import CRUDRepository
 
 
 class ResolutionRepository(CRUDRepository[Resolution, str]):
-    
     def __init__(self, session: Session):
         super().__init__(Resolution, session)

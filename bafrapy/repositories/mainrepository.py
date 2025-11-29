@@ -23,6 +23,7 @@ class UnitOfWorkContext(UnitOfWork):
         self._providers = ProviderRepository(self._session)
         self._assets = AssetRepository(self._session)
         self._resolutions = ResolutionRepository(self._session)
+
     def __enter__(self) -> "UnitOfWorkContext":
         return self
 
@@ -45,10 +46,11 @@ class UnitOfWorkContext(UnitOfWork):
     @property
     def assets(self) -> AssetRepository:
         return self._assets
-    
+
     @property
     def resolutions(self) -> ResolutionRepository:
         return self._resolutions
+
 
 @define
 class MainRepository:

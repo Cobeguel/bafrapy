@@ -3,11 +3,11 @@ from typing import Any, Generic, List, Optional, TypeVar
 
 from sqlmodel import SQLModel
 
-T = TypeVar('T', bound=SQLModel)
-ID = TypeVar('ID')
+T = TypeVar("T", bound=SQLModel)
+ID = TypeVar("ID")
+
 
 class AbstractRepository(ABC, Generic[T, ID]):
-
     @abstractmethod
     def save(self, instance: T) -> T:
         pass

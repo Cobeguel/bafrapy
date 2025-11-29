@@ -19,9 +19,10 @@ class Availability:
     start_date: date
     end_date: date
 
+
 class OrderType(Enum):
-    DAILY = 'DAYLY'
-    MONTHLY = 'MONTHLY'
+    DAILY = "DAYLY"
+    MONTHLY = "MONTHLY"
 
 
 @define
@@ -30,7 +31,7 @@ class DownloadOrder:
     order_date: date
     resolution: ResolutionClient
     symbol: str
-    
+
 
 @define
 class DataTask:
@@ -39,7 +40,9 @@ class DataTask:
     data_repository: OHLCVRepository
     min_row_batch: int = field(default=100000)
 
-    def _generate_orders(self, symbol:str, resolution: ResolutionClient, start: date, end: date) -> List[DownloadOrder]:
+    def _generate_orders(
+        self, symbol: str, resolution: ResolutionClient, start: date, end: date
+    ) -> List[DownloadOrder]:
         if start >= end:
             return []
 
@@ -48,28 +51,41 @@ class DataTask:
 
         if not (current.year == end.year and current.month == end.month):
             while (current.year, current.month) < (end.year, end.month):
-                orders.append(DownloadOrder(order_type=OrderType.MONTHLY, 
-                                order_date=current, 
-                                resolution=resolution, 
-                                symbol=symbol))
+                orders.append(
+                    DownloadOrder(
+                        order_type=OrderType.MONTHLY,
+                        order_date=current,
+                        resolution=resolution,
+                        symbol=symbol,
+                    )
+                )
                 current = current + relativedelta(months=1)
 
         while current <= end:
-            orders.append(DownloadOrder(order_type=OrderType.DAILY, 
-                                order_date=current, 
-                                resolution=resolution, 
-                                symbol=symbol))
+            orders.append(
+                DownloadOrder(
+                    order_type=OrderType.DAILY,
+                    order_date=current,
+                    resolution=resolution,
+                    symbol=symbol,
+                )
+            )
             current = current + timedelta(days=1)
 
         return orders
 
-    def _download(self, provider_client: ProviderClient, order: DownloadOrder) -> pd.DataFrame:
+    def _download(
+        self, provider_client: ProviderClient, order: DownloadOrder
+    ) -> pd.DataFrame:
         if order.order_type == OrderType.MONTHLY:
-            data = provider_client.get_month_data(order.symbol, order.order_date, order.resolution)
+            data = provider_client.get_month_data(
+                order.symbol, order.order_date, order.resolution
+            )
         else:
-            data = provider_client.get_day_data(order.symbol, order.order_date, order.resolution)
+            data = provider_client.get_day_data(
+                order.symbol, order.order_date, order.resolution
+            )
         return data
-
 
     def run(self, providerName: str, symbol: str):
         try:
@@ -83,26 +99,35 @@ class DataTask:
             asset = repo.assets.get_by_provider_and_symbol(provider.id, symbol)
 
             if asset is None:
-                raise ValueError(f"Asset {symbol} not found for provider {providerName}")
+                raise ValueError(
+                    f"Asset {symbol} not found for provider {providerName}"
+                )
 
             if asset.first_date is None:
                 raise ValueError(f"Asset {asset.id} has no first date set")
-            
+
             available_resolutions = provider.resolutions
 
             for resolution in available_resolutions:
                 start_date = asset.first_date.date()
-                
-                availability = self.data_repository.symbol_availability(provider.external_name, asset.symbol, resolution.seconds)
+
+                availability = self.data_repository.symbol_availability(
+                    provider.external_name, asset.symbol, resolution.seconds
+                )
                 if availability is not None and availability.last_date is not None:
                     start_date = max(start_date, availability.last_date)
                     if start_date is not None:
                         start_date = start_date + timedelta(days=1)
                 # TODO: Fetch real last date from provider or handle unupdated assets
                 end_date = date.today() - timedelta(days=2)
-                resolution = ResolutionClient(name=resolution.provider_display, seconds=resolution.seconds)
-                orders_by_resolutions.append(self._generate_orders(asset.symbol, resolution, start_date, end_date))
-            
+                resolution = ResolutionClient(
+                    name=resolution.provider_display, seconds=resolution.seconds
+                )
+                orders_by_resolutions.append(
+                    self._generate_orders(
+                        asset.symbol, resolution, start_date, end_date
+                    )
+                )
 
         for orders in orders_by_resolutions:
             data: pd.DataFrame = None
@@ -110,7 +135,11 @@ class DataTask:
                 try:
                     chunk = self._download(provider_client, order)
                 except Exception as e:
-                    log().error("Error downloading data", LogField(key="order", value=order), LogField(key="error", value=e))
+                    log().error(
+                        "Error downloading data",
+                        LogField(key="order", value=order),
+                        LogField(key="error", value=e),
+                    )
                     raise e
                 if chunk is None or chunk.empty:
                     continue
@@ -129,7 +158,3 @@ class DataTask:
                 self.data_repository.insert_data(data)
 
             self.data_repository.clean_or_optimize_symbol(providerName, symbol)
-
-
-
-

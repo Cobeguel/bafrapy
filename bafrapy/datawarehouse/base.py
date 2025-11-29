@@ -40,9 +40,9 @@ class SymbolAvailability:
 
 
 class OHLCVRepository(ABC):
-    _ORIGINAL_STATE = 'ORIGINAL'
-    _GAP_STATE = 'GAP'
-    
+    _ORIGINAL_STATE = "ORIGINAL"
+    _GAP_STATE = "GAP"
+
     @abstractmethod
     def provider_symbols_stats(self, provider: str) -> List[SymbolStats]:
         pass
@@ -60,11 +60,15 @@ class OHLCVRepository(ABC):
         pass
 
     @abstractmethod
-    def symbol_availability(self, provider: str, symbol: str, resolution: int) -> SymbolAvailability:
+    def symbol_availability(
+        self, provider: str, symbol: str, resolution: int
+    ) -> SymbolAvailability:
         pass
 
     @abstractmethod
-    def count_rows(self, provider: str = "", symbol: str = "", resolution: int = 0) -> int:
+    def count_rows(
+        self, provider: str = "", symbol: str = "", resolution: int = 0
+    ) -> int:
         pass
 
     @abstractmethod
@@ -72,11 +76,15 @@ class OHLCVRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_range(self, provider: str, symbol: str, resolution: int, start: date, end: date) -> pd.DataFrame:
+    def get_by_range(
+        self, provider: str, symbol: str, resolution: int, start: date, end: date
+    ) -> pd.DataFrame:
         pass
 
     @abstractmethod
-    def get_by_range_stream(self, provider: str, symbol: str, resolution: int, start: date, end: date) -> Iterator[pd.DataFrame]:
+    def get_by_range_stream(
+        self, provider: str, symbol: str, resolution: int, start: date, end: date
+    ) -> Iterator[pd.DataFrame]:
         pass
 
     @abstractmethod

@@ -7,12 +7,15 @@ from ray.serve.handle import DeploymentHandle
 
 app = FastAPI(title="Workflows API")
 
+
 class SymbolsRequest(BaseModel):
     provider: str
+
 
 class DataRequest(BaseModel):
     provider: str
     symbol: str
+
 
 @serve.deployment(name="api")
 @serve.ingress(app)
@@ -24,7 +27,7 @@ class ApiDeployment:
     async def symbols_run(self, request: SymbolsRequest):
         try:
             self.worker_handler.run_symbols.remote(request.provider)
-            
+
             return JSONResponse(status_code=202, content={"enqueued": True})
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))

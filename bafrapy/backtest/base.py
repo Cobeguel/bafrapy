@@ -20,23 +20,27 @@ class Side(Enum):
     """
     Enum to represent the side of an order.
     """
-    buy = 1    #: Represents a long order.
-    sell = 2   #: Represents a short order.
+
+    buy = 1  #: Represents a long order.
+    sell = 2  #: Represents a short order.
+
 
 class Pair(Enum):
     """
     Enum to represent the pair of a trade of the form A/B.
     """
-    base = 1    #: Represent the base instrument as A in the pair A/B.
-    quote = 2   #: Represent the quote instrument as B in the pair A/B.
-    
+
+    base = 1  #: Represent the base instrument as A in the pair A/B.
+    quote = 2  #: Represent the quote instrument as B in the pair A/B.
+
 
 class OrderType(Enum):
     """
     Enum to represent the type of an order.
     """
-    market = 1      #: Represents a market order.
-    limit = 2       #: Represents a limit order. 
+
+    market = 1  #: Represents a market order.
+    limit = 2  #: Represents a limit order.
     stop_limit = 3  #: Represents a stop limit order.
 
 
@@ -44,14 +48,15 @@ class OrderState(Enum):
     """
     Enum to represent the state of an order.
     """
-    created = 0                       #: Represents an order that has been created but not yet checked.
-    pending = 1                       #: Represents an open order.
-    rejected = 2                      #: A created order that cannot be processsed. 
+
+    created = 0  #: Represents an order that has been created but not yet checked.
+    pending = 1  #: Represents an open order.
+    rejected = 2  #: A created order that cannot be processsed.
     # pre_processed = 2               #: Represents an order that has been pre_processed. It may be canceled.
-    pre_executed = 4                #: Represents a processed but not totally validated order. It may be canceled.
-    executed = 4                      #: Represents a processed an valid order.
-    canceled = 5                      #: Represents a canceled order.
-    partially_executed = 6            #: Represents a partially completed composite order.
+    pre_executed = 4  #: Represents a processed but not totally validated order. It may be canceled.
+    executed = 4  #: Represents a processed an valid order.
+    canceled = 5  #: Represents a canceled order.
+    partially_executed = 6  #: Represents a partially completed composite order.
 
 
 @dataclass
@@ -92,7 +97,6 @@ class Order(ABC):
         Indicates whether the order is currently canceled.
         """
         return self.state == OrderState.canceled
-    
 
     def cancel(self, time: datetime) -> bool:
         """
@@ -110,7 +114,7 @@ class Order(ABC):
             return True
         return False
 
-    def execute(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
+    def execute(self, ohlcv: OHLCV, **kwargs) -> "ResultOrder":
         """
         Execute an order. The order must be in an open state to be executed.
         The way the order is executed depends on the type of the order.
@@ -123,23 +127,26 @@ class Order(ABC):
         """
         if self.state is not OrderState.pending:
             raise ValueError("an order must be open to be executed")
-         
+
         result = self.process(ohlcv, **kwargs)
         if result is None:
             return None
 
         # The order is simple and was executed
         if result.is_trade() and result.trade is not None:
-            if self.state is not OrderState.executed or self.state != OrderState.pre_executed:
+            if (
+                self.state is not OrderState.executed
+                or self.state != OrderState.pre_executed
+            ):
                 raise InvalidStateExecutedSimpleOrder(self.order_id)
 
-        else: 
+        else:
             self.executed_time = ohlcv.timestamp
             self.state = OrderState.partially_executed
 
         self.executed_time = ohlcv.timestamp
         return result
-    
+
     def validate(self) -> None:
         self.state = OrderState.executed
 
@@ -147,7 +154,7 @@ class Order(ABC):
         self.state = OrderState.rejected
 
     @abstractmethod
-    def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
+    def process(self, ohlcv: OHLCV, **kwargs) -> "ResultOrder":
         """
         Process the order. This method must be implemented by the subclasses.
 
@@ -160,7 +167,7 @@ class Order(ABC):
         pass
 
 
-@dataclass 
+@dataclass
 class SimpleOrder(Order):
     #: Side of the order
     side: Side
@@ -168,7 +175,7 @@ class SimpleOrder(Order):
     #: Amount of units. The meaning of the quantity depends on the order type.
     quantity: Decimal
 
-    @abstractmethod 
+    @abstractmethod
     def required_money(self, current_ohlcv: OHLCV) -> Decimal:
         """
         Calculate the required money to execute the order.
@@ -198,42 +205,51 @@ class MarketOrder(SimpleOrder):
     """
     Class to represent a market order.
     """
+
     #: Execution criteria
     criteria: ClassVar[OrderExecutionCriteria] = OrderExecutionCriteria.on_open
 
     def __post_init__(self):
-        if self.quantity <= 0:    
+        if self.quantity <= 0:
             raise ValueError("ammount to buy/sell must be greater than 0")
-        
+
         log().debug(f"market order {self.order_id} created: {self.create_time}")
-        
-    def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
+
+    def process(self, ohlcv: OHLCV, **kwargs) -> "ResultOrder":
         """
         Implement the process method for a market order. A market order is executed at the current price.
         For more information about the method, see the Order class.
         """
         self.state = OrderState.pre_executed
         self.executed_time = ohlcv.timestamp
-        executed_price = ohlcv.open if self.__class__.criteria == OrderExecutionCriteria.on_open else ohlcv.close
-        return ResultOrder(trade=Trade(self, self.quantity, executed_price, ohlcv.timestamp))
-    
+        executed_price = (
+            ohlcv.open
+            if self.__class__.criteria == OrderExecutionCriteria.on_open
+            else ohlcv.close
+        )
+        return ResultOrder(
+            trade=Trade(self, self.quantity, executed_price, ohlcv.timestamp)
+        )
+
     def required_money(self, current_ohlcv: OHLCV) -> Decimal:
         return current_ohlcv.close * self.quantity
 
 
 @dataclass
 class MarketOrderQuote(SimpleOrder):
-
     def __post_init__(self):
         if self.quantity <= 0:
             raise ValueError("order cannot be set with negative currency")
-        
+
         log().debug(f"market order {self.order_id} created: {self.create_time}")
-        
-    def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
+
+    def process(self, ohlcv: OHLCV, **kwargs) -> "ResultOrder":
         self.state = OrderState.pre_executed
         self.executed_time = ohlcv.timestamp
-        return ResultOrder(trade=Trade(self, self.quantity/ohlcv.close, ohlcv.close, ohlcv.timestamp))
+        return ResultOrder(
+            trade=Trade(self, self.quantity / ohlcv.close, ohlcv.close, ohlcv.timestamp)
+        )
+
 
 @dataclass
 class LimitOrder(SimpleOrder):
@@ -245,18 +261,17 @@ class LimitOrder(SimpleOrder):
     quantity: Decimal
 
     #: Price required to execute the order.
-    price: Decimal = field(default=Decimal(0)) # 0 means market order
-    
+    price: Decimal = field(default=Decimal(0))  # 0 means market order
+
     # position_target: int = field(default=0) # if apply to a current opened position
     take_profit: Decimal = Decimal(0)
     stop_loss: Decimal = Decimal(0)
 
     def __post_init__(self):
-       if self.price < 0:
+        if self.price < 0:
             raise ValueError("price cannot be negative")
-       
-       log().debug(f"limit order {self.order_id} created: {self.create_time}")
 
+        log().debug(f"limit order {self.order_id} created: {self.create_time}")
 
     @property
     def required_money(self) -> Decimal:
@@ -265,7 +280,7 @@ class LimitOrder(SimpleOrder):
         """
         return self.quantity * self.price
 
-    def process(self, ohlcv: OHLCV, **kwargs) -> 'ResultOrder':
+    def process(self, ohlcv: OHLCV, **kwargs) -> "ResultOrder":
         """
         Implement the process method for a limit order. A limit order is executed when the current candle
         reaches the price of the order.
@@ -279,32 +294,38 @@ class LimitOrder(SimpleOrder):
                 return None
 
         self.state = OrderState.executed
-        return ResultOrder(trade=Trade(self, self.quantity, self.price, ohlcv.timestamp))
-        
+        return ResultOrder(
+            trade=Trade(self, self.quantity, self.price, ohlcv.timestamp)
+        )
+
 
 @dataclass
 class Trade:
     """
     Class to represent a trade in the trading system.
     """
+
     order: SimpleOrder
     quantity: Decimal
     executed_price: Decimal
     executed_time: datetime
 
     def __post_init__(self):
-        if self.order.state != OrderState.executed or self.order.state != OrderState.pre_executed:
+        if (
+            self.order.state != OrderState.executed
+            or self.order.state != OrderState.pre_executed
+        ):
             raise ValueError("order must be executed")
-            
+
         log().debug(f"Trade created: {self.executed_time}")
 
-    @property        
+    @property
     def side(self) -> Side:
         """
         Get the side of the trade based on the side of the order.
         """
         return self.order.side
-    
+
     def money_traded(self) -> Decimal:
         """
         Calculate the required money to execute the order.
@@ -317,6 +338,7 @@ class ResultOrder:
     """
     Class to represent the result of an order. The result may contain a trade or another order but not both.
     """
+
     order: Order = field(default=None)
     trade: Trade = field(default=None)
 
@@ -329,7 +351,7 @@ class ResultOrder:
         Indicates whether the result contains a trade.
         """
         return self.trade is not None
-    
+
     def is_order(self) -> bool:
         """
         Indicates whether the result contains an order.
@@ -341,6 +363,7 @@ class PositionState(Enum):
     """
     Enum to represent the state of a position.
     """
+
     open = 1
     closed = 2
 
@@ -350,6 +373,7 @@ class Position:
     """
     Class to represent a position in the trading system.
     """
+
     #: Id of the position
     position_id: int
 
@@ -383,12 +407,14 @@ class Position:
         """
         if init_trade is None:
             raise ValueError("initial_order is required")
-        
+
         self.trades.append(init_trade)
         self.quantity += init_trade.quantity
-        order = init_trade.order # type: SimpleOrder
+        order = init_trade.order  # type: SimpleOrder
         self.side = order.side
-        log().debug(f"Position created with trade made by order {init_trade.order.order_id} at {init_trade.executed_time}")
+        log().debug(
+            f"Position created with trade made by order {init_trade.order.order_id} at {init_trade.executed_time}"
+        )
 
     def is_closed(self) -> bool:
         """
@@ -409,25 +435,31 @@ class Position:
         Returns:
             bool: True if the side is reversed, False otherwise.
         """
-        return self.side != side 
-    
+        return self.side != side
+
     def _check_close_position(self) -> bool:
         """
         Check if the position must be closed and close it if necessary.
         """
-        if self.quantity == 0 and len(self.pending_orders()) == 0 and self.state != PositionState.closed:
+        if (
+            self.quantity == 0
+            and len(self.pending_orders()) == 0
+            and self.state != PositionState.closed
+        ):
             self.state = PositionState.closed
             return True
         return False
-    
+
     def add_order(self, order: Order):
         """
         Add a pending order to the position. The order must be open.
         """
         if order.state != OrderState.pending:
-            raise ValueError("order must be open")        
+            raise ValueError("order must be open")
         if order.order_id in [id for id in self.orders]:
-            raise ValueError(f"order with {id} already exists in position {self.position_id}")
+            raise ValueError(
+                f"order with {id} already exists in position {self.position_id}"
+            )
         self.orders.append(order)
         if self._is_side_reverse(order.side):
             self.reserved_quantity += order.quantity
@@ -441,7 +473,7 @@ class Position:
             self.quantity -= trade.quantity
         else:
             self.quantity += trade.quantity
-        
+
         self._check_close_position()
 
     def pending_orders(self) -> List[Order]:
@@ -452,7 +484,7 @@ class Position:
             List[Order]: List of pending orders.
         """
         return [order for order in self.orders if order.state == OrderState.pending]
-    
+
     def active_orders(self) -> List[Order]:
         """
         Get the active orders related to the position.
@@ -482,7 +514,9 @@ class Position:
         if len(self.get_trades()) == 0:
             raise ValueError("no trades")
 
-        return sum([trade.executed_price for trade in self.get_trades()]) / len(self.get_trades())
+        return sum([trade.executed_price for trade in self.get_trades()]) / len(
+            self.get_trades()
+        )
 
 
 @dataclass
@@ -498,6 +532,7 @@ class VBroker:
     """
     Class to represent a broker in the trading system.
     """
+
     config: InitVar[VBrokerConfig]
 
     #: Money available in the broker.
@@ -516,23 +551,31 @@ class VBroker:
     fee: Decimal = field(default=Decimal(0), init=False)
 
     #: List of all the orders in the broker.
-    orders : List[Order] = field(default_factory=list, init=False)
+    orders: List[Order] = field(default_factory=list, init=False)
 
     #: List of all new children orders in the broker.
     new_children_orders: List[Order] = field(default_factory=list, init=False)
 
     #: List of all created but unchecked orders in the broker.
-    created_orders: OrderedDict[int, Order] = field(default_factory=OrderedDict, init=False)
+    created_orders: OrderedDict[int, Order] = field(
+        default_factory=OrderedDict, init=False
+    )
 
     #: List of all rejected orders in the broker.
-    rejected_orders: OrderedDict[int, Order] = field(default_factory=OrderedDict, init=False)
+    rejected_orders: OrderedDict[int, Order] = field(
+        default_factory=OrderedDict, init=False
+    )
 
     #: List of all the pending orders in the broker. Is a subset of the orders.
-    pending_orders: OrderedDict[int, Order] = field(default_factory=OrderedDict, init=False)
+    pending_orders: OrderedDict[int, Order] = field(
+        default_factory=OrderedDict, init=False
+    )
 
     #: List of all cancelled orders in the broker.
-    canceled_orders: OrderedDict[int, Order] = field(default_factory=OrderedDict, init=False)
-    
+    canceled_orders: OrderedDict[int, Order] = field(
+        default_factory=OrderedDict, init=False
+    )
+
     #: List of all the closed orders in the broker.
     executed_orders: Dict[int, Order] = field(default_factory=dict, init=False)
 
@@ -544,7 +587,7 @@ class VBroker:
 
     #: List of all the closed positions in the broker.
     closed_positions: List[Position] = field(default_factory=list, init=False)
-    
+
     #: Historical dataset used to backtest.
     _data: DataSet = field(default=None, init=False)
 
@@ -564,7 +607,7 @@ class VBroker:
 
     #: Last ohlcv
     _last_ohlcv: OHLCV = field(default=None, init=False)
-    
+
     def __post_init__(self, config: VBrokerConfig):
         self._data = config.data
         self.available_money = config.initial_money
@@ -578,28 +621,28 @@ class VBroker:
         Get the current time in the broker.
         """
         return self._current_data.timestamp
-    
+
     @property
     def total_money(self) -> Decimal:
         """
         Get total money in the broker (available + reserved).
         """
         return self.available_money + self.reserved_money
-    
+
     # @property
     # def reserved_money(self) -> Decimal:
     #     """
     #     Get the reserved money in the broker.
     #     """
     #     pass
-    
+
     @property
     def total_quote(self) -> Decimal:
         """
         Get total quote in the broker (available + reserved).
         """
         return self.available_quote + self.reserved_quote
-        
+
     def _next_data(self) -> OHLCV:
         """
         Get the next data from the dataset.
@@ -615,7 +658,7 @@ class VBroker:
         """
         if commission < 0:
             raise ValueError("broker commissions cannot be negative")
-        
+
     def set_dataset(self, data: DataSet):
         """
         Set the dataset to be used by the broker.
@@ -634,22 +677,22 @@ class VBroker:
         self.created_orders.clear()
         self._process_orders(self.pending_orders)
         return self._current_data
-    
+
     def current_data(self) -> OHLCV:
         """
         Get the current data in the broker.
         """
         return self._current_data
-    
+
     def get_order(self, id: int) -> Order:
         """
         Get an order by id.
         """
-        try: 
+        try:
             return self.orders[id]
         except IndexError:
             return None
-    
+
     def add_money(self, money: float):
         """
         Add money to the broker.
@@ -660,7 +703,7 @@ class VBroker:
 
     def extract_money(self, money: float):
         """
-        Simulate the extraction of money from the broker. 
+        Simulate the extraction of money from the broker.
         """
         if money < 0:
             raise ValueError("cannot extract negative money")
@@ -675,7 +718,7 @@ class VBroker:
         Add an open order to the broker. All orders are added by only checking the state.
         If the order cannot be executed (ej not enough money), this conflict is resolved
         within the process orders method.
-        
+
         Args:
             order (Order): Order to be added.
         """
@@ -689,15 +732,21 @@ class VBroker:
         if order_id not in self.pending_orders:
             return False
 
-    def create_order(self,
-                    side: Side,
-                    type: OrderType,
-                    quantity: Decimal,
-                    price: Decimal = 0,
-                    take_profit: Decimal = 0,
-                    stop_loss: Decimal = 0) -> OrderState:
+    def create_order(
+        self,
+        side: Side,
+        type: OrderType,
+        quantity: Decimal,
+        price: Decimal = 0,
+        take_profit: Decimal = 0,
+        stop_loss: Decimal = 0,
+    ) -> OrderState:
         self._next_order_id += 1
-        return self._add_order(Order(self._next_order_id, side, type, quantity, price, take_profit, stop_loss))
+        return self._add_order(
+            Order(
+                self._next_order_id, side, type, quantity, price, take_profit, stop_loss
+            )
+        )
 
     def _process_order(self, order: Order, price: Decimal, time: datetime):
         """
@@ -711,11 +760,10 @@ class VBroker:
         self.executed_orders[order.order_id] = self.pending_orders.pop(order.order_id)
         self.trades.append(trade)
 
-    
     def _process_orders(self, pending_orders: OrderedDict[int, Order]):
         """
         Process all pending orders. This method is called within next_data method.
-        Tries to execute all pending orders. As a pending order could generate a new order, 
+        Tries to execute all pending orders. As a pending order could generate a new order,
         it is processed recursively but only with children orders in every new iteration.
 
         There are several issues to consider:
@@ -725,7 +773,7 @@ class VBroker:
 
         log().debug(f"number of orders to process: {len(pending_orders)}")
         processed_orders = []
-        new_orders = [] # Orders as result from composite orders
+        new_orders = []  # Orders as result from composite orders
         for order_id in self.pending_orders.keys():
             order = self.pending_orders[order_id]
             log().debug(f"order to process: {type(order)} - {order.order_id}")
@@ -736,19 +784,19 @@ class VBroker:
             if result is None:
                 continue
 
-            if result.is_trade(): # That means the order is simple
+            if result.is_trade():  # That means the order is simple
                 if self.open_position is not None:
-                    self.open_position.notify_trade(result.trade)  
+                    self.open_position.notify_trade(result.trade)
                 # If there is no open position, create a new one
                 else:
                     self.open_position = Position(self._next_position_id, result.trade)
-                    self._next_position_id += 1       
+                    self._next_position_id += 1
                 # In both cases we have a position with a trade notified
-                  
+
                 self.trades.append(result.trade)
 
                 # Adjust money and quote according to the order side
-                order = result.trade.order # type: SimpleOrder
+                order = result.trade.order  # type: SimpleOrder
                 if order.side == Side.buy:
                     # If the order is a market order, the reserved money is not known
                     if isinstance(order, MarketOrder):
@@ -758,8 +806,8 @@ class VBroker:
                     else:
                         self.reserved_money -= result.trade.money_traded()
                     self.available_quote += result.trade.quantity
-                        
-                else: # Side.sell
+
+                else:  # Side.sell
                     if isinstance(order, MarketOrder):
                         if self.available_quote < result.trade.quantity:
                             order.state = OrderState.rejected
@@ -775,7 +823,7 @@ class VBroker:
                 processed_orders.append(order_id)
             else:
                 raise ValueError("result must contain an order or a trade")
- 
+
         for order_id in processed_orders:
             self.pending_orders.pop(order_id)
         for order in new_orders:
@@ -797,24 +845,27 @@ class VBroker:
         """
         Add a limit order to the broker.
         """
-        order = LimitOrder(self._next_order_id, self.current_time, side, quantity, price)
+        order = LimitOrder(
+            self._next_order_id, self.current_time, side, quantity, price
+        )
         self._add_order(order)
         self._next_order_id += 1
         return order
-    
+
 
 @dataclass
 class Stats:
-    num_orders : int = field(default=0)
-    num_positions : int = field(default=0)
-    num_closed_positions : int = field(default=0)
-    num_canceled_orders : int = field(default=0)
-    num_executed_orders : int = field(default=0)
-    num_open_orders : int = field(default=0)
+    num_orders: int = field(default=0)
+    num_positions: int = field(default=0)
+    num_closed_positions: int = field(default=0)
+    num_canceled_orders: int = field(default=0)
+    num_executed_orders: int = field(default=0)
+    num_open_orders: int = field(default=0)
+
 
 @dataclass
 class Strategy(metaclass=ABCMeta):
-    data : DataSet
+    data: DataSet
     broker_config = InitVar[VBrokerConfig]
     broker: VBroker = field(default=None, init=False)
 
@@ -823,12 +874,12 @@ class Strategy(metaclass=ABCMeta):
             raise ValueError("data is required")
         if not self.data.has_data():
             raise ValueError("data is empty")
-        self.broker = VBroker(data=self.data, config=self.broker_config)  
+        self.broker = VBroker(data=self.data, config=self.broker_config)
 
     def next_data(self):
         self.broker.next_data()
         self.on_next_data()
-    
+
     @abstractmethod
     def on_next_data(self):
         pass
@@ -837,22 +888,39 @@ class Strategy(metaclass=ABCMeta):
     def initialize(self):
         pass
 
-    def buy(self, type: OrderType, quantity: Decimal, price: Decimal = 0, take_profit: Decimal = 0, stop_loss: Decimal = 0) -> Order:
-        return self.broker.create_order(Side.long, type, quantity, price, take_profit, stop_loss)
-    
-    def sell(self, type: OrderType, quantity: Decimal, price: Decimal = 0, take_profit: Decimal = 0, stop_loss: Decimal = 0) -> Order:
-        return self.broker.create_order(Side.short, type, quantity, price, take_profit, stop_loss)
+    def buy(
+        self,
+        type: OrderType,
+        quantity: Decimal,
+        price: Decimal = 0,
+        take_profit: Decimal = 0,
+        stop_loss: Decimal = 0,
+    ) -> Order:
+        return self.broker.create_order(
+            Side.long, type, quantity, price, take_profit, stop_loss
+        )
+
+    def sell(
+        self,
+        type: OrderType,
+        quantity: Decimal,
+        price: Decimal = 0,
+        take_profit: Decimal = 0,
+        stop_loss: Decimal = 0,
+    ) -> Order:
+        return self.broker.create_order(
+            Side.short, type, quantity, price, take_profit, stop_loss
+        )
 
     def get_pending_orders(self) -> List[Order]:
         return self.broker.pending_orders
-    
+
     def get_open_order_by_id(self, order_id: int) -> Order:
         return self.broker.pending_orders[order_id]
-    
+
     def get_open_positions(self) -> List[Position]:
         return self.broker.open_positions
-    
-    
+
 
 # @dataclass
 # class Backtest:
@@ -864,4 +932,3 @@ class Strategy(metaclass=ABCMeta):
 #
 #    def start_backtesting(self):
 #        self.Strategy.next_data()
-

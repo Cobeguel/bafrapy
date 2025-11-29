@@ -20,7 +20,7 @@ from bafrapy.logger import LogField, LoguruLogger as log
 
 
 @define
-class SymbolClient():
+class SymbolClient:
     symbol: str
     base: str
     quote: str
@@ -30,7 +30,7 @@ class SymbolClient():
 
 
 @define
-class ResolutionClient():
+class ResolutionClient:
     name: str
     seconds: int
 
@@ -43,39 +43,36 @@ class ProviderClient(ABC):
         return self._provider_name
 
     @abstractmethod
-    def list_available_symbols(self) -> List[SymbolClient]:
-        ...
+    def list_available_symbols(self) -> List[SymbolClient]: ...
     @abstractmethod
-    def symbol_first_date(self, symbol: str) -> datetime:
-        ...
+    def symbol_first_date(self, symbol: str) -> datetime: ...
     @abstractmethod
-    def symbol_last_date(self, symbol: str) -> datetime:
-        ...
+    def symbol_last_date(self, symbol: str) -> datetime: ...
     @abstractmethod
-    def get_day_data(self, symbol: str, day: date, resolution: ResolutionClient) -> pd.DataFrame:
-        ...
+    def get_day_data(
+        self, symbol: str, day: date, resolution: ResolutionClient
+    ) -> pd.DataFrame: ...
     @abstractmethod
-    def get_month_data(self, symbol: str, month: date, resolution: ResolutionClient) -> pd.DataFrame:
-        ...
+    def get_month_data(
+        self, symbol: str, month: date, resolution: ResolutionClient
+    ) -> pd.DataFrame: ...
 
 
 class ProviderClientBuilder(ABC):
     @abstractmethod
-    def create_provider(self) -> ProviderClient:
-        ...
-    
+    def create_provider(self) -> ProviderClient: ...
+
     @abstractmethod
-    def get_provider_name(self) -> str:
-        ...
+    def get_provider_name(self) -> str: ...
 
 
 class ProviderClientConfig(ABC):
     @abstractmethod
-    def load_config(cls, key: str, content: str):
-        ...
+    def load_config(cls, key: str, content: str): ...
+
 
 @define
-class BackoffConfig():
+class BackoffConfig:
     timeout: int = field(default=10)
     backoff_factor: int = field(default=30)
     max_tries: int = field(default=3)
@@ -83,14 +80,14 @@ class BackoffConfig():
 
 
 @define
-class HTTPClient():
+class HTTPClient:
     _backoff_config: BackoffConfig = field(alias="backoff_config")
     _session: Session = field(factory=Session, init=False, repr=False)
 
     def _is_retryable(self, e: Exception) -> bool:
-        return (
-            isinstance(e, Timeout) or
-            (isinstance(e, HTTPError) and e.response.status_code not in self._backoff_config.giveup_codes)
+        return isinstance(e, Timeout) or (
+            isinstance(e, HTTPError)
+            and e.response.status_code not in self._backoff_config.giveup_codes
         )
 
     def _make_request(self, req: Request, raisable: bool = True) -> Response:
@@ -98,13 +95,26 @@ class HTTPClient():
         log().debug(f"Requesting {prepared.url}")
         response = self._session.send(prepared, timeout=self._backoff_config.timeout)
         if response.status_code >= 400 and response.status_code < 600:
-            log().error("Request failed", LogField("status_code", response.status_code), LogField("url", prepared.url))
+            log().error(
+                "Request failed",
+                LogField("status_code", response.status_code),
+                LogField("url", prepared.url),
+            )
         if raisable:
             response.raise_for_status()
         log().debug(f"Response {response.status_code} from {prepared.url}")
         return response
 
-    def request(self, endpoint: str, method: str, params: dict = None, headers: dict = None, json: dict = None, retrayable: bool = True, raisable: bool = True) -> Response:
+    def request(
+        self,
+        endpoint: str,
+        method: str,
+        params: dict = None,
+        headers: dict = None,
+        json: dict = None,
+        retrayable: bool = True,
+        raisable: bool = True,
+    ) -> Response:
         req = Request(method, endpoint, params=params, headers=headers, json=json)
 
         if retrayable:
@@ -112,7 +122,7 @@ class HTTPClient():
                 stop=stop_after_attempt(self._backoff_config.max_tries),
                 wait=wait_exponential(multiplier=self._backoff_config.backoff_factor),
                 retry=retry_if_exception(self._is_retryable),
-                reraise=True
+                reraise=True,
             )
             try:
                 return retry_request(self._make_request)(req, raisable=raisable)
@@ -121,4 +131,3 @@ class HTTPClient():
 
         else:
             return self._make_request(req, raisable=raisable)
-

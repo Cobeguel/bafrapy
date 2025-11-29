@@ -11,10 +11,7 @@ from workflows.tasks.data import DataTask
 from workflows.tasks.symbols import SymbolTask
 
 
-@serve.deployment(
-    name="worker",
-    num_replicas=1  
-)
+@serve.deployment(name="worker", num_replicas=1)
 @define
 class Worker:
     repository_builder: MainRepositoryBuilder = field(kw_only=True)
@@ -38,7 +35,7 @@ class Worker:
         log().info("Worker initialized")
 
     def run_symbols(self, provider: str) -> None:
-            self.symbols_task.run(provider)
+        self.symbols_task.run(provider)
 
     def run_data(self, provider: str, symbol: str) -> None:
         self.data_task.run(provider, symbol)

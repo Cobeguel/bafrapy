@@ -11,34 +11,28 @@ from bafrapy.libs.singleton import Singleton
 
 
 @define
-class LogField():
+class LogField:
     key: str
     value: str
 
 
 class Logger(ABC):
     @abstractmethod
-    def debug(self, msg: str, *fields: LogField):
-        ...
+    def debug(self, msg: str, *fields: LogField): ...
     @abstractmethod
-    def info(self, msg: str, *fields: LogField):
-        ...
+    def info(self, msg: str, *fields: LogField): ...
     @abstractmethod
-    def warning(self, msg: str, *fields: LogField):
-        ...
+    def warning(self, msg: str, *fields: LogField): ...
     @abstractmethod
-    def error(self, msg: str, *fields: LogField):
-        ...
+    def error(self, msg: str, *fields: LogField): ...
     @abstractmethod
-    def exception(self, msg: str, *fields: LogField):
-        ...
+    def exception(self, msg: str, *fields: LogField): ...
     @abstractmethod
-    def critical(self, msg: str, *fields: LogField):
-        ...
+    def critical(self, msg: str, *fields: LogField): ...
 
 
 @define
-class LoguruConfig():
+class LoguruConfig:
     sink: Optional[TextIO] = field(default=sys.stdout)
     level: Optional[str] = None
     format: Optional[str] = None
@@ -63,10 +57,11 @@ class LoguruConfig():
                     diagnose=config["diagnose"],
                     colorize=config["colorize"],
                     log_file=config["log_file"],
-                    rotation=config["rotation"]
+                    rotation=config["rotation"],
                 )
             except KeyError as e:
                 raise ValueError(f"Missing key: {e}")
+
 
 def format_record(record):
     timestamp = record["time"].strftime("%Y/%m/%d %H:%M:%S")
@@ -86,7 +81,15 @@ class LoguruLogger(Logger, metaclass=Singleton):
         params = {}
 
         if self.config.sink is not None:
-            for field_name in ("sink", "level", "format", "enqueue", "backtrace", "diagnose", "colorize"):
+            for field_name in (
+                "sink",
+                "level",
+                "format",
+                "enqueue",
+                "backtrace",
+                "diagnose",
+                "colorize",
+            ):
                 value = getattr(self.config, field_name)
                 if value is not None:
                     params[field_name] = value
@@ -107,7 +110,7 @@ class LoguruLogger(Logger, metaclass=Singleton):
     def change_level(self, level: str):
         if self.deactivated:
             raise RuntimeError("LoguruLogger is deactivated.")
-        
+
         if self.is_configured():
             self.config.level = level
             self.__apply_config()

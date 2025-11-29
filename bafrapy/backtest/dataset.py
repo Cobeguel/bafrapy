@@ -10,10 +10,12 @@ import pandas as pd
 from bafrapy.datawarehouse.repository import ClikhouseOHLCVRepository
 from bafrapy.logger import LoguruLogger as log
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def set_context(precision: int):
     getcontext().prec = precision
+
 
 @dataclass
 class PeekIterator(Generic[T]):
@@ -26,7 +28,7 @@ class PeekIterator(Generic[T]):
     def peek(self) -> T:
         return self.next_element
 
-    def __iter__(self) -> 'PeekIterator':
+    def __iter__(self) -> "PeekIterator":
         return self
 
     def __next__(self) -> T:
@@ -35,6 +37,7 @@ class PeekIterator(Generic[T]):
         current_element = self.next_element
         self.next_element = next(self.iterator, None)
         return current_element
+
 
 @dataclass
 class OHLCV:
@@ -51,7 +54,8 @@ class OHLCV:
         self.high = Decimal(self.high)
         self.low = Decimal(self.low)
         self.close = Decimal(self.close)
-        self.volume = Decimal(self.volume)  
+        self.volume = Decimal(self.volume)
+
 
 @dataclass
 class DataSet(ABC):
@@ -64,7 +68,7 @@ class DataSet(ABC):
     @abstractmethod
     def process_row(self, row: Iterable[object]) -> OHLCV:
         pass
-    
+
     @abstractmethod
     def next_data(self) -> OHLCV:
         pass
@@ -77,7 +81,9 @@ class DataSet(ABC):
 @dataclass
 class DataSetPandas(DataSet):
     data: pd.DataFrame = field(default=None)
-    row_iterator: Iterator[pd.DataFrame] = field(default_factory=lambda: iter([pd.DataFrame()]), init=False)
+    row_iterator: Iterator[pd.DataFrame] = field(
+        default_factory=lambda: iter([pd.DataFrame()]), init=False
+    )
 
     def __post_init__(self):
         self.data = self.data.reset_index(drop=True)
@@ -96,7 +102,10 @@ class DataSetPandas(DataSet):
             low=Decimal(row[3]),
             close=Decimal(row[4]),
             volume=Decimal(row[5]),
-            custom={row._fields[i]: getattr(row, row._fields[i]) for i in range(6, len(row._fields))}
+            custom={
+                row._fields[i]: getattr(row, row._fields[i])
+                for i in range(6, len(row._fields))
+            },
         )
 
     def next_data(self) -> OHLCV:
@@ -118,16 +127,24 @@ class DataSetClickhouse(DataSetPandas):
     stream: Iterator[pd.DataFrame] = field(default=None, init=False)
     data: pd.DataFrame = field(default=None, init=False)
     chunk_iterator: Iterator[pd.DataFrame] = field(default=None, init=False)
-    client: ClikhouseOHLCVRepository = field(default_factory=ClikhouseOHLCVRepository, init=False)
+    client: ClikhouseOHLCVRepository = field(
+        default_factory=ClikhouseOHLCVRepository, init=False
+    )
 
     def _initialize(self):
-        self.stream = self.client.get_data_stream(self.asset, self.resolution, self.start_date, self.end_date)
+        self.stream = self.client.get_data_stream(
+            self.asset, self.resolution, self.start_date, self.end_date
+        )
         self.data = next(self.stream, None)
         if self.data is None:
-            raise ValueError(f"No data for {self.asset} by the specified range: {self.start_date} - {self.end_date}")
+            raise ValueError(
+                f"No data for {self.asset} by the specified range: {self.start_date} - {self.end_date}"
+            )
         self.chunk_iterator = self.data.itertuples()
 
-        log().info(f"DataSetClickhouse initialized: {self.asset} - {self.start_date} - {self.end_date}")
+        log().info(
+            f"DataSetClickhouse initialized: {self.asset} - {self.start_date} - {self.end_date}"
+        )
 
     def __post_init__(self):
         self._initialize()
@@ -142,6 +159,8 @@ class DataSetClickhouse(DataSetPandas):
             else:
                 return None
         return self.process_row(self.current_data)
-    
+
     def has_data(self) -> bool:
-        return self.stream is not None and (self.data is not None or self.current_data is not None)
+        return self.stream is not None and (
+            self.data is not None or self.current_data is not None
+        )

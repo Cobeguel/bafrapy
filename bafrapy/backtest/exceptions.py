@@ -1,4 +1,3 @@
-
 class BrokerException(Exception):
     pass
 
@@ -14,8 +13,8 @@ class OrderAlreadyExists(BrokerException):
 class NotEnoughMoney(BrokerException):
     def __str__(self):
         return "NotEnoughMoney: broker has not enough money"
-  
-    
+
+
 class NotEnoughMoneyToExecuteMarketOrder(BrokerException):
     def __init__(self, order_id: int):
         self.order_id = order_id
@@ -40,7 +39,7 @@ class NotEnoughQuoteToExecuteMarketOrder(BrokerException):
 class NotEnoughQuote(BrokerException):
     def __str__(self):
         return "NotEnoughQuote: broker has not enough quote"
-    
+
 
 class OrderException(Exception):
     pass

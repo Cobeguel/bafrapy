@@ -4,9 +4,4 @@ from bafrapy.models.generated import Asset, Base, Provider, Resolution
 # BaseModel = SQLModel
 BaseModel = Base
 
-__all__ = [
-    "Asset",
-    "Provider",
-    "Resolution",
-    "BaseModel"
-]
+__all__ = ["Asset", "Provider", "Resolution", "BaseModel"]

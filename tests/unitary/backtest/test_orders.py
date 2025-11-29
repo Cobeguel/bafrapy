@@ -5,7 +5,6 @@ import bafrapy.backtest.dataset as dataset
 
 
 class TestOrder:
-
     def test_create_market_order(self):
         order = base.MarketOrder(1, datetime(2024, 1, 1), base.Side.buy, 100)
         assert order.order_id == 1

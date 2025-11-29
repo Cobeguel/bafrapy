@@ -28,8 +28,7 @@ def _is_directus_association_table(table: Table) -> bool:
 
     # Exactly 2 ForeignKeyConstraints
     fk_constraints = [
-        c for c in table.constraints
-        if isinstance(c, ForeignKeyConstraint)
+        c for c in table.constraints if isinstance(c, ForeignKeyConstraint)
     ]
     if len(fk_constraints) != 2:
         return False
@@ -38,7 +37,6 @@ def _is_directus_association_table(table: Table) -> bool:
     non_id_cols = {col for col in table.columns if col.name != "id"}
 
     return non_id_cols == fk_cols
-
 
 
 class BafrapyDeclarativeGenerator(DeclarativeGenerator):
@@ -69,14 +67,12 @@ class BafrapyDeclarativeGenerator(DeclarativeGenerator):
             # Original case: all columns have FK
             all_cols_are_fk = all(col.foreign_keys for col in table.columns)
 
-            is_standard_association = (
-                len(fk_constraints) == 2 and all_cols_are_fk
-            )
+            is_standard_association = len(fk_constraints) == 2 and all_cols_are_fk
 
             # New: Directus N:M table with PK 'id'
-            is_directus_association = (
-                len(fk_constraints) == 2 and _is_directus_association_table(table)
-            )
+            is_directus_association = len(
+                fk_constraints
+            ) == 2 and _is_directus_association_table(table)
 
             if is_standard_association or is_directus_association:
                 model = models_by_table_name[qualified_name] = Model(table)
@@ -126,8 +122,7 @@ class BafrapyDeclarativeGenerator(DeclarativeGenerator):
 
         # Change base if we only have tables
         if not any(
-            isinstance(model, ModelClass)
-            for model in models_by_table_name.values()
+            isinstance(model, ModelClass) for model in models_by_table_name.values()
         ):
             super().generate_base()
 
@@ -144,7 +139,6 @@ class BafrapyDeclarativeGenerator(DeclarativeGenerator):
             global_names.add(model.name)
 
         return list(models_by_table_name.values())
-
 
     def generate_column_attr_name(
         self,
