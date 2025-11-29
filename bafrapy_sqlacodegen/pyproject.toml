@@ -1,5 +1,5 @@
 [project]
-name = "bafrapy_sqlcodegen"
+name = "bafrapy_sqlacodegen"
 version = "0.1.0"
 description = "Opinionated generators from sqlacodegen"
 requires-python = ">=3.10"
@@ -10,5 +10,5 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project.entry-points."sqlacodegen.generators"]
-bafrapy_declarative = "bafrapy_sqlcodegen.generator:BafrapyDeclarativeGenerator"
-bafrapy_sqlmodel = "bafrapy_sqlcodegen.generator:BafrapySQLModelGenerator"
+bafrapy_declarative = "bafrapy_sqlacodegen.generator:BafrapyDeclarativeGenerator"
+bafrapy_sqlmodel = "bafrapy_sqlacodegen.generator:BafrapySQLModelGenerator"

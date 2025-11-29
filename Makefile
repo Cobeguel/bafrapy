@@ -2,7 +2,7 @@
 
 build:
 	uv pip install -e .
-	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall
+	uv pip install -e ./bafrapy_sqlacodegen --force-reinstall
 
 serve:
 	docker compose down
@@ -31,11 +31,11 @@ tests:
 	uv run -m pytest -q
 
 tidy:
-	uv run isort bafrapy bafrapy_sqlcodegen scripts workflows
-	uv run ruff format bafrapy bafrapy_sqlcodegen scripts workflows
+	uv run isort bafrapy bafrapy_sqlacodegen scripts workflows
+	uv run ruff format bafrapy bafrapy_sqlacodegen scripts workflows
 
 compile-generator:
-	uv pip install -e ./bafrapy_sqlcodegen --force-reinstall
+	uv pip install -e ./bafrapy_sqlacodegen --force-reinstall
 
 generate-models:
 	uv run scripts/generate-models.py
