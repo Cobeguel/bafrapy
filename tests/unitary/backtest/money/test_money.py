@@ -1,7 +1,61 @@
 import pytest
 
-from bafrapy.backtest.money import EMoney, Currency
+from bafrapy.backtest.money import EMoney, Currency, Normalizer
 from decimal import Decimal
+
+
+class TestNormalizer:
+    def test_normalize_positive_decimals(self):
+        result = Normalizer.normalize_decimal(Decimal("1.00"), 2)
+        assert result == 100
+
+    def test_normaliza_zero_decimals(self):
+        result = Normalizer.normalize_decimal(Decimal("1.00"), 0)
+        assert result == 1
+
+    def test_normalize_decimal_rounding_up(self):
+        result = Normalizer.normalize_decimal(Decimal("1.006"), 2)
+        assert result == 101
+
+    def test_normalize_decimal_rounding_down(self):
+        result = Normalizer.normalize_decimal(Decimal("1.004"), 2)
+        assert result == 100
+
+    def test_normalize_negative_decimals(self):
+        with pytest.raises(ValueError):
+            Normalizer.normalize_decimal(Decimal("1.00"), -1)
+
+    def test_to_decimal(self):
+        result = Normalizer.to_decimal(100, 2)
+        assert result == Decimal("1.00")
+
+    def test_normalize_float(self):
+        result = Normalizer.normalize_float(1.00, 2)
+        assert result == 100
+
+    def test_normalize_float_rounding_up(self):
+        result = Normalizer.normalize_float(1.006, 2)
+        assert result == 101
+
+    def test_normalize_float_rounding_down(self):
+        result = Normalizer.normalize_float(1.004, 2)
+        assert result == 100
+
+    def test_normalize_float_negative_decimals(self):
+        with pytest.raises(ValueError):
+            Normalizer.normalize_float(1.00, -1)
+
+    def test_normalize_float_non_float_value(self):
+        with pytest.raises(TypeError):
+            Normalizer.normalize_float(1, 2)
+
+    def test_normalize_float_non_int_value(self):
+        with pytest.raises(TypeError):
+            Normalizer.normalize_float(Decimal("1.00"), 2)
+
+    def test_to_float(self):
+        result = Normalizer.to_float(100, 2)
+        assert result == 1.00
 
 
 class TestEMoney:

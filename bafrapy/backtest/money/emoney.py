@@ -6,6 +6,52 @@ from bafrapy.backtest.money.currency import Currency
 
 
 @define(frozen=True, slots=True)
+class Normalizer:
+    @staticmethod
+    def assert_decimals(decimals: int) -> None:
+        if not isinstance(decimals, int) or isinstance(decimals, bool):
+            raise TypeError(f"Unsupported decimals type: {type(decimals)}")
+        if decimals < 0:
+            raise ValueError(f"Decimals must be greater than 0: {decimals}")
+
+    @staticmethod
+    def normalize_decimal(value: Decimal, decimals: int) -> int:
+        Normalizer.assert_decimals(decimals)
+        if not isinstance(value, Decimal):
+            raise TypeError(f"Unsupported value type: {type(value)}")
+
+        scaled = (value * (Decimal(10) ** decimals)).quantize(
+            Decimal("1"),
+            rounding=ROUND_HALF_EVEN,
+        )
+        return int(scaled)
+
+    @staticmethod
+    def normalize_float(value: float, decimals: int) -> int:
+        Normalizer.assert_decimals(decimals)
+        if not isinstance(value, float):
+            raise TypeError(f"Unsupported value type: {type(value)}")
+
+        return Normalizer.normalize_decimal(Decimal(str(value)), decimals)
+
+    @staticmethod
+    def to_decimal(value: int, decimals: int) -> Decimal:
+        Normalizer.assert_decimals(decimals)
+        if not isinstance(value, int):
+            raise TypeError(f"Unsupported value type: {type(value)}")
+
+        return Decimal(value) / (Decimal(10) ** decimals)
+
+    @staticmethod
+    def to_float(value: int, decimals: int) -> float:
+        Normalizer.assert_decimals(decimals)
+        if not isinstance(value, int):
+            raise TypeError(f"Unsupported value type: {type(value)}")
+
+        return float(Normalizer.to_decimal(value, decimals))
+
+
+@define(frozen=True, slots=True)
 class EMoney:
     value: int = field(validator=validators.instance_of(int))
     currency: Currency = field(validator=validators.instance_of(Currency))
@@ -14,10 +60,7 @@ class EMoney:
         if not isinstance(m, EMoney):
             raise TypeError(f"Unsupported type: {type(m)}")
         if self.currency != m.currency:
-            raise TypeError(
-                f"Cannot operate on assets with different currencies: "
-                f"{self.currency} != {m.currency}"
-            )
+            raise TypeError(f"Cannot operate on assets with different currencies: {self.currency} != {m.currency}")
 
     def _assert_is_number(self, n: int | float | Decimal) -> None:
         if not isinstance(n, (int, float, Decimal)) or isinstance(n, bool):
@@ -33,22 +76,22 @@ class EMoney:
             raise TypeError(f"Unsupported amount type: {type(amount)}")
         if not isinstance(currency, Currency):
             raise TypeError(f"Unsupported currency type: {type(currency)}")
-        scaled = (amount * (Decimal(10) ** currency.decimals)).quantize(
-            Decimal("1"),
-            rounding=ROUND_HALF_EVEN,
+
+        return cls(
+            value=Normalizer.normalize_decimal(amount, currency.decimals),
+            currency=currency,
         )
-        return cls(value=int(scaled), currency=currency)
 
     @classmethod
     def from_float(cls, value: float, currency: Currency) -> "EMoney":
         return cls.from_decimal(Decimal(str(value)), currency)
 
     def to_decimal(self) -> Decimal:
-        return Decimal(self.value) / (Decimal(10) ** self.currency.decimals)
+        return Normalizer.to_decimal(self.value, self.currency.decimals)
 
     def to_float(self) -> float:
         self._assert_is_valid_emoney(self)
-        return float(self.to_decimal())
+        return Normalizer.to_float(self.value, self.currency.decimals)
 
     def is_negative(self) -> bool:
         return self.value < 0
@@ -109,11 +152,8 @@ class EMoney:
             )
 
         if isinstance(multiplier, (float, Decimal)):
-            scaled = (Decimal(self.value) * Decimal(str(multiplier))).quantize(
-                Decimal("1"), rounding=ROUND_HALF_EVEN
-            )
             return EMoney(
-                value=int(scaled),
+                value=Normalizer.normalize_decimal(Decimal(str(multiplier)), self.currency.decimals),
                 currency=self.currency,
             )
 
@@ -132,9 +172,7 @@ class EMoney:
             )
 
         if isinstance(divisor, (float, Decimal)):
-            scaled = (Decimal(self.value) / Decimal(str(divisor))).quantize(
-                Decimal("1"), rounding=ROUND_HALF_EVEN
-            )
+            scaled = (Decimal(self.value) / Decimal(str(divisor))).quantize(Decimal("1"), rounding=ROUND_HALF_EVEN)
             return EMoney(
                 value=int(scaled),
                 currency=self.currency,
