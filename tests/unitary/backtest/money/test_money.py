@@ -287,3 +287,33 @@ class TestEMoney:
         m2 = EMoney(value=200, currency=Currency("USD", 2))
         with pytest.raises(TypeError):
             _ = m1 * m2
+
+    def test_mul_escalar_float_respects_self_value(self):
+        m1 = EMoney(value=200, currency=Currency("EUR", 2))
+        m3 = m1 * 2.0
+        assert m3.value == 400
+        assert m3.currency == Currency("EUR", 2)
+
+    def test_mul_escalar_float_fractional(self):
+        m1 = EMoney(value=200, currency=Currency("EUR", 2))
+        m3 = m1 * 1.5
+        assert m3.value == 300
+        assert m3.currency == Currency("EUR", 2)
+
+    def test_mul_escalar_decimal_respects_self_value(self):
+        m1 = EMoney(value=200, currency=Currency("EUR", 2))
+        m3 = m1 * Decimal("2.0")
+        assert m3.value == 400
+        assert m3.currency == Currency("EUR", 2)
+
+    def test_rmul_escalar_int(self):
+        m1 = EMoney(value=200, currency=Currency("EUR", 2))
+        m3 = 3 * m1
+        assert m3.value == 600
+        assert m3.currency == Currency("EUR", 2)
+
+    def test_rmul_escalar_float(self):
+        m1 = EMoney(value=200, currency=Currency("EUR", 2))
+        m3 = 2.0 * m1
+        assert m3.value == 400
+        assert m3.currency == Currency("EUR", 2)

@@ -152,10 +152,10 @@ class EMoney:
             )
 
         if isinstance(multiplier, (float, Decimal)):
-            return EMoney(
-                value=Normalizer.normalize_decimal(Decimal(str(multiplier)), self.currency.decimals),
-                currency=self.currency,
+            scaled = (Decimal(self.value) * Decimal(str(multiplier))).quantize(
+                Decimal("1"), rounding=ROUND_HALF_EVEN
             )
+            return EMoney(value=int(scaled), currency=self.currency)
 
         raise ValueError(f"Unsupported multiplier type: {type(multiplier)}")
 
