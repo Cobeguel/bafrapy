@@ -1,8 +1,8 @@
-FROM directus/directus:11.10.0
+FROM directus/directus:11.15.1
 
-WORKDIR /directus
-
+USER root
 RUN corepack enable
-
-RUN pnpm add directus-extension-sync
-RUN pnpm add directus-sync
+USER node
+RUN pnpm install directus-extension-sync
+RUN pnpm install directus-sync
+USER root
