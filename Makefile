@@ -5,6 +5,8 @@ build:
 	uv pip install -e ./bafrapy_sqlacodegen --force-reinstall
 
 serve:
+	docker volume create bafrapy-postgresql-data >/dev/null
+  	docker volume create bafrapy-directus-data >/dev/null
 	docker compose down
 	docker compose up -d
 

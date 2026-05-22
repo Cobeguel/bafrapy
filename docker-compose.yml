@@ -21,20 +21,22 @@ services:
       - bafrapy-network
 
   database:
-    image: mysql:8.4
-    container_name: bafrapy-mysql
+    image: postgres:17.9-trixie
+    container_name: bafrapy-postgresql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_DEFAULT_AUTH: caching_sha2_password 
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     volumes:
-      - mysql-data:/var/lib/mysql
+      - bafrapy-postgresql-data:/var/lib/postgresql/data
+      - ./postgresql:/docker-entrypoint-initdb.d:ro
     networks:
       - bafrapy-network
     ports:
-      - "${DB_EXTERNAL_PORT}:${DB_PORT}" 
+      - "${DB_EXTERNAL_PORT}:${DB_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_DATABASE}"]
+      start_period: 5s
 
   directus:
     build:
@@ -45,54 +47,24 @@ services:
       - bafrapy-network
     ports:
       - ${DIRECTUS_EXTERNAL_PORT}:${DIRECTUS_PORT}
-    volumes:
-      - ${DIRECTUS_BASE_PATH}/uploads:/directus/uploads
-      - ${DIRECTUS_BASE_PATH}/extensions:/directus/extensions
-      - ${DIRECTUS_BASE_PATH}/templates:/directus/templates
     depends_on:
-      - database
-
+      database:
+        condition: service_healthy
     environment:
-      DB_CLIENT: mysql
-      DB_HOST: bafrapy-mysql
+      DB_CLIENT: pg
+      DB_HOST: database
       DB_PORT: ${DB_PORT}
       DB_DATABASE: ${DB_DATABASE}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-
       ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
       ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
-      ACCESS_TOKEN_TTL: 1d
-      API_TOKEN: ${API_TOKEN}
-      FLOWS_ENV_ALLOW_LIST: API_TOKEN
-
-  redis:
-    container_name: bafrapy-redis
-    image: redis:7.4.2
-    hostname: bafrapy-redis
-    restart:
-      unless-stopped
-    command: redis-server
+      EXTENSIONS_AUTO_RELOAD: 'true'
     volumes:
-      - redis-data:/data
-    ports:
-      - ${REDIS_PORT}:6379
-    networks:
-      - bafrapy-network
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:5.2.2
-    ports:
-      - '8080:80'
-    networks:
-      - bafrapy-network
-    environment:
-      PMA_HOST: bafrapy-mysql
-      PMA_USER: root
-      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
-      UPLOAD_LIMIT: 200M
-    depends_on:
-      - database
+      - bafrapy-directus-data:/directus
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8055/health || exit 1"]
+      start_period: 5s
 
 networks:
   bafrapy-network:
@@ -100,8 +72,12 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
-    name: mysql-data
+  bafrapy-postgresql-data:
+    name: bafrapy-postgresql-data
+    external: true
+
+  bafrapy-directus-data:
+    name: bafrapy-directus-data
     external: true
 
   clickhouse-data:
@@ -110,6 +86,3 @@ volumes:
     name: clickhouse-config
   clickhouse-log:
     name: clickhouse-log
-
-  redis-data:
-    name: redis-data
