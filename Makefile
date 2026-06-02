@@ -41,7 +41,6 @@ compile-generator:
 
 generate-models:
 	uv run scripts/generate-models.py
-	uv run ruff format bafrapy/models/generated.py
 
 build-directus-sync:
 	docker build -t bafrapy-directus-sync ./directus-sync

@@ -47,3 +47,5 @@ data/
 
 # Directus
 data/directus/
+
+directus-schema/

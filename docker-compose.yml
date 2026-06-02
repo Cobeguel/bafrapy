@@ -59,6 +59,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
       ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+      ADMIN_TOKEN: ${DIRECTUS_ADMIN_TOKEN}
       EXTENSIONS_AUTO_RELOAD: 'true'
     volumes:
       - bafrapy-directus-data:/directus

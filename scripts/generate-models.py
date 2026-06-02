@@ -6,28 +6,40 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-tables = [
-    "assets",
-    "providers_resolutions",
-    "providers",
-    "resolutions",
+exchange_tables = ["exchanges", "markets"]
+
+GENERATION_CONFIGS = [
+    {"tables": exchange_tables, "outfile": "tmp/generated/backoffice/models/exchange.py"},
 ]
 
-cmd = [
-    sys.executable,
-    "-m",
-    "sqlacodegen",
-    "--generator",
-    "bafrapy_declarative",
-    "--options",
-    "use_inflect",
-    "--tables",
-    ",".join(tables),
-    "--outfile",
-    "bafrapy/models/generated.py",
-    f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
-    f"@{os.getenv('DB_HOST')}:{os.getenv('DB_EXTERNAL_PORT')}/"
-    f"{os.getenv('DB_DATABASE')}?charset=utf8mb4",
-]
 
-subprocess.run(cmd, check=True)
+def build_sqlacodegen_cmd(tables: list[str], outfile: str) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "sqlacodegen",
+        "--generator",
+        "declarative",
+        "--options",
+        "use_inflect",
+        "--tables",
+        ",".join(tables),
+        "--outfile",
+        outfile,
+        f"postgresql+psycopg://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
+        f"@{os.getenv('DB_HOST')}:{os.getenv('DB_EXTERNAL_PORT')}/"
+        f"{os.getenv('DB_DATABASE')}",
+    ]
+
+
+def main() -> None:
+    for config in GENERATION_CONFIGS:
+        os.makedirs(os.path.dirname(config["outfile"]), exist_ok=True)
+        subprocess.run(
+            build_sqlacodegen_cmd(config["tables"], config["outfile"]),
+            check=True,
+        )
+
+
+if __name__ == "__main__":
+    main()
