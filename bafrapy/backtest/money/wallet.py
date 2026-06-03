@@ -19,14 +19,16 @@ class Wallet:
     @beartype
     def add_balance(self, m: EMoney) -> None:
         if m.currency not in self._currencies:
-            self.add_currency(m.currency)
-        self._currencies[m.currency] += m
+            self._currencies[m.currency] = m
+        else:
+            self._currencies[m.currency] += m
 
     @beartype
     def subtract_balance(self, m: EMoney) -> None:
         if m.currency not in self._currencies:
-            self.add_currency(m.currency)
-        self._currencies[m.currency] -= m
+            self._currencies[m.currency] = -m
+        else:
+            self._currencies[m.currency] -= m
 
     @beartype
     def get_balance(self, currency: Currency) -> EMoney:
