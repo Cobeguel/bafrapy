@@ -148,13 +148,17 @@ class BinanceClient:
                 if m < monthly_end:
                     urls.append(self._monthly_url(self.build_symbol(base, quote), resolution.name, m))
 
-            for d in days_between(monthly_end, end_effective):
-                urls.append(self._daily_url(self.build_symbol(base, quote), resolution.name, d))
+            # Daily URLs are only available for resolutions up to 1 day
+            if resolution.seconds <= 86400:
+                for d in days_between(monthly_end, end_effective):
+                    urls.append(self._daily_url(self.build_symbol(base, quote), resolution.name, d))
 
         else:
             urls = []
-            for d in days_between(start, end_effective):
-                urls.append(self._daily_url(self.build_symbol(base, quote), resolution.name, d))
+            # Daily URLs are only available for resolutions up to 1 day
+            if resolution.seconds <= 86400:
+                for d in days_between(start, end_effective):
+                    urls.append(self._daily_url(self.build_symbol(base, quote), resolution.name, d))
 
         ohlcv = pl.DataFrame()
         for url in urls:
