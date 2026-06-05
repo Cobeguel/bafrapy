@@ -1,7 +1,12 @@
+from abc import ABC, abstractmethod
+from datetime import datetime
 from enum import Enum
-from typing import List, Protocol
+from typing import List
 
-from bafrapy.exchanges.clients.binance import BinanceClient
+import polars as pl
+
+from attrs import define
+
 from bafrapy.exchanges.markets import MarketResponse
 
 
@@ -9,15 +14,34 @@ class ExchangeProvider(Enum):
     BINANCE = "binance"
 
 
-class ExchangeClient(Protocol):
+@define(frozen=True)
+class ExchangeClientResolution:
+    seconds: int
+    name: str
+
+
+class ExchangeSpotClient(ABC):
+    _exchange_name: str
+
+    @property
+    def provider_name(self) -> str:
+        return self._exchange_name
+
+    @abstractmethod
+    def resolve_symbol(self, base: str, quote: str) -> str: ...
+    @abstractmethod
     def get_markets(self) -> List[MarketResponse]: ...
-
-
-class ExchangeClientFactory:
-    __registry: dict[ExchangeProvider, type[ExchangeClient]] = {ExchangeProvider.BINANCE: BinanceClient}
-
-    def create_exchange_client(self, exchange: ExchangeProvider) -> ExchangeClient:
-        client_class = self.__registry.get(exchange)
-        if client_class is None:
-            raise ValueError(f"Exchange {exchange} not supported")
-        return client_class()
+    @abstractmethod
+    def get_first_market_date(self, symbol: str) -> datetime: ...
+    @abstractmethod
+    def get_last_market_date(self, symbol: str) -> datetime: ...
+    @abstractmethod
+    def get_ohlcv(
+        self,
+        base: str,
+        quote: str,
+        resolution: ExchangeClientResolution,
+        start: datetime,
+        end: datetime,
+        chunk_size=50000,
+    ) -> pl.DataFrame: ...

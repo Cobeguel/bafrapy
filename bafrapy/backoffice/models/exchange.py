@@ -74,6 +74,7 @@ class Market(Base):
     )
 
     symbol: Mapped[str] = mapped_column(String(255), nullable=False)
+    raw_symbol: Mapped[str] = mapped_column(String(255), nullable=False)
     base: Mapped[str] = mapped_column(String(255), nullable=False)
     quote: Mapped[str] = mapped_column(String(255), nullable=False)
     exchange: Mapped[str] = mapped_column(String(255), nullable=False)

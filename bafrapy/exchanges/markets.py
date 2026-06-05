@@ -5,6 +5,7 @@ from attrs import define, field, validators
 
 @define(slots=False, kw_only=False)
 class MarketResponse:
+    raw_symbol: str = field(validator=[validators.instance_of(str), validators.min_len(1)])
     base: str = field(validator=[validators.instance_of(str), validators.min_len(1)])
     quote: str = field(validator=[validators.instance_of(str), validators.min_len(1)])
 

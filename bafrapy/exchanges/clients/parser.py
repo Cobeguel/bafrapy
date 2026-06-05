@@ -4,6 +4,7 @@ from cattrs import Converter
 from jmespath import compile
 
 MARKET_PARSER = compile("""{
+    raw_symbol: symbol,
     base: base,
     quote: quote,
     amount_min: limits.amount.min && to_string(limits.amount.min),
