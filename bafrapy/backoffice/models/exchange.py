@@ -21,7 +21,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bafrapy.backoffice.models.base import Base
 
-
 ExchangeResolution = Table(
     "exchanges_resolutions",
     Base.metadata,

@@ -1,8 +1,9 @@
-from typing import List, Optional
+import uuid
+
+from datetime import date
+from typing import Iterator, List, Optional
 
 import polars as pl
-
-import uuid
 
 from adbc_driver_gizmosql import dbapi
 from adbc_driver_gizmosql.dbapi import Connection
@@ -13,10 +14,6 @@ from bafrapy.datawarehouse.base import (
     Market,
     OHLCVRepository,
 )
-
-from datetime import date
-
-from typing import Iterator
 
 
 class DucklakeError(Exception):

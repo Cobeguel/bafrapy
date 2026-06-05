@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Iterator
 
 import ccxt
@@ -13,9 +13,6 @@ from bafrapy.exchanges.clients.parser import MARKET_PARSER, DecimalConverter
 from bafrapy.exchanges.markets import MarketResponse
 from bafrapy.libs.parsetime import parse_timestamp
 from bafrapy.libs.rangetimes import days_between, months_between
-
-from datetime import timedelta
-
 from bafrapy.logger import LogField, LoguruLogger as log
 
 
