@@ -48,3 +48,6 @@ data/
 data/directus/
 
 directus-schema/
+
+#dagster
+.tmp_dagster*
