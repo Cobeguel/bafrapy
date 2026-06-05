@@ -7,6 +7,7 @@ build:
 serve:
 	docker volume create bafrapy-postgresql-data >/dev/null
 	docker volume create bafrapy-directus-data >/dev/null
+	docker volume create bafrapy-ducklake-data >/dev/null
 	docker compose down
 	docker compose up -d
 
@@ -19,9 +20,6 @@ phpmyadmin:
 
 phpmyadmin-down:
 	docker compose -f docker-compose-phpmyadmin.yml down
-
-ch-log-error:
-	docker exec -it bafrapy_clickhouse cat /var/log/clickhouse-server/clickhouse-server.err.log
 
 local-env:
 	cp .env.example .env

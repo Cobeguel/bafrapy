@@ -41,7 +41,6 @@ ENV/
 
 # Local files
 .local
-clickhouse
 logs/
 data/
 

@@ -1,25 +1,5 @@
 
 services:
-  clickhouse:
-    container_name: bafrapy_clickhouse
-    image: clickhouse/clickhouse-server:23.9.5-alpine
-    environment:
-      - CLICKHOUSE_USER=${CH_USER}
-      - CLICKHOUSE_PASSWORD=${CH_PASSWORD}
-      - CLICKHOUSE_DB=${CH_DATABASE}
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-    volumes:
-      - clickhouse-data:/var/lib/clickhouse
-      - clickhouse-log:/var/log/clickhouse-server
-      - clickhouse-config:/etc/clickhouse-server
-      - ./clickhouse-settings/custom-config.xml:/etc/clickhouse-server/config.d/custom-config.xml
-      - ./clickhouse-settings/custom-user.xml:/etc/clickhouse-server/users.d/custom-user.xml
-    ports:
-      - ${CH_HTTP_EXTERNAL_PORT}:${CH_HTTP_PORT}
-      - ${CH_NATIVE_EXTERNAL_PORT}:${CH_NATIVE_PORT}
-    networks:
-      - bafrapy-network
-
   database:
     image: postgres:17.9-trixie
     container_name: bafrapy-postgresql
@@ -67,6 +47,37 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8055/health || exit 1"]
       start_period: 5s
 
+  gizmosql:
+    build:
+      context: ./gizmosql
+      dockerfile: Dockerfile
+    container_name: bafrapy-ducklake
+    ports:
+      - "${GIZMOSQL_EXTERNAL_PORT}:${GIZMOSQL_PORT}"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      TLS_ENABLED: "0"
+      GIZMOSQL_USERNAME: ${GIZMOSQL_USERNAME}
+      GIZMOSQL_PASSWORD: ${GIZMOSQL_PASSWORD}
+      
+
+      DATABASE_FILENAME: "/opt/gizmosql/data/${GIZMOSQL_DATABASE}.duckdb"
+      INIT_SQL_COMMANDS_FILE: "/opt/gizmosql/init/init_ducklake.sql"
+
+      PGHOST: database
+      PGPORT: ${DB_PORT}
+      PGDATABASE: ducklake
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+
+    volumes:
+      - bafrapy-ducklake-data:/opt/gizmosql/data
+      - ./gizmosql/init:/opt/gizmosql/init:ro
+    networks:
+      - bafrapy-network
+
 networks:
   bafrapy-network:
     name: bafrapy-network
@@ -81,9 +92,6 @@ volumes:
     name: bafrapy-directus-data
     external: true
 
-  clickhouse-data:
-    name: clickhouse-data
-  clickhouse-config:
-    name: clickhouse-config
-  clickhouse-log:
-    name: clickhouse-log
+  bafrapy-ducklake-data:
+    name: bafrapy-ducklake-data
+    external: true

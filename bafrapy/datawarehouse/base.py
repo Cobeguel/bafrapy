@@ -1,96 +1,50 @@
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Iterator, List
+from typing import Iterator, List, Optional
 
-import pandas as pd
+import polars as pl
 
 from attrs import define
 
 
 @define(frozen=True)
-class Symbol:
-    provider: str
+class Market:
+    exchange: str
     symbol: str
+    base: str
+    quote: str
 
 
 @define(frozen=True)
-class RowsResolution:
-    resolution: int
-    num_rows: int
-
-
-@define(frozen=True)
-class SymbolStats(Symbol):
-    rows_resolutions: List[RowsResolution]
-
-
-@define(frozen=True)
-class DateCount(Symbol):
-    date_count: date
-    rows_resolutions: List[RowsResolution]
-
-
-@define(frozen=True)
-class SymbolAvailability:
-    provider: str
-    symbol: str
-    resolution: int
-    first_date: date
-    last_date: date
+class HistoricalRange:
+    market: Market
+    start: date
+    end: date
 
 
 class OHLCVRepository(ABC):
-    _ORIGINAL_STATE = "ORIGINAL"
-    _GAP_STATE = "GAP"
-
     @abstractmethod
-    def provider_symbols_stats(self, provider: str) -> List[SymbolStats]:
+    def list_exchanges(self) -> List[str]:
         pass
 
     @abstractmethod
-    def symbol_stats(self, provider: str, symbol: str) -> SymbolStats:
+    def list_symbols(self, exchange: str) -> List[str]:
         pass
 
     @abstractmethod
-    def list_providers(self) -> List[str]:
+    def market_historical_range(self, exchange: str, symbol: str, resolution: int) -> Optional[HistoricalRange]:
         pass
 
     @abstractmethod
-    def list_symbols(self, provider: str) -> List[str]:
+    def insert_ohlcv(self, ohlcv: pl.DataFrame):
         pass
 
     @abstractmethod
-    def symbol_availability(
-        self, provider: str, symbol: str, resolution: int
-    ) -> SymbolAvailability:
+    def get_ohlcv(self, exchange: str, symbol: str, resolution: int, start: date, end: date) -> pl.DataFrame:
         pass
 
     @abstractmethod
-    def count_rows(
-        self, provider: str = "", symbol: str = "", resolution: int = 0
-    ) -> int:
-        pass
-
-    @abstractmethod
-    def insert_data(self, data: pd.DataFrame, fill_gaps: bool = False):
-        pass
-
-    @abstractmethod
-    def get_by_range(
-        self, provider: str, symbol: str, resolution: int, start: date, end: date
-    ) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
-    def get_by_range_stream(
-        self, provider: str, symbol: str, resolution: int, start: date, end: date
-    ) -> Iterator[pd.DataFrame]:
-        pass
-
-    @abstractmethod
-    def clean_or_optimize_provider(self, provider: str):
-        pass
-
-    @abstractmethod
-    def clean_or_optimize_symbol(self, provider: str, symbol: str):
+    def get_ohlcv_stream(
+        self, exchange: str, symbol: str, resolution: int, start: date, end: date, chunk_size: int = 100000
+    ) -> Iterator[pl.DataFrame]:
         pass

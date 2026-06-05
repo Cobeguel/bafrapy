@@ -12,7 +12,6 @@ dependencies = [
     "attrs>=25.3.0",
     "backoff>=2.2.1",
     "cattrs>=25.2.0",
-    "clickhouse-connect>=0.8.15",
     "dotenv>=0.9.9",
     "fastapi>=0.115.11",
     "freezegun>=1.5.2",
@@ -47,6 +46,10 @@ dependencies = [
     "ccxt>=4.5.54",
     "psycopg[binary]>=3.2",
     "jmespath>=1.1.0",
+    "polars>=1.41.2",
+    "adbc-driver-gizmosql>=1.1.7",
+    "pyarrow>=24.0.0",
+    "fsspec>=2026.4.0",
 ]
 
 [build-system]
