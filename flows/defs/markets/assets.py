@@ -1,7 +1,7 @@
 import dagster as dg
 
 from bafrapy.backoffice.models import Market, MarketStatus
-from bafrapy.exchanges import ExchangeClientFactory
+from bafrapy.exchanges import ExchangeSpotClientFactory
 from bafrapy.exchanges.client import ExchangeProvider
 from bafrapy.exchanges.markets import MarketResponse
 from flows.resources.backoffice import BackofficeResource
@@ -16,7 +16,7 @@ def sync_exchange_markets(
 ) -> None:
     exchange_id = context.partition_key
     try:
-        client = ExchangeClientFactory().create_exchange_client(ExchangeProvider(exchange_id))
+        client = ExchangeSpotClientFactory().create_exchange_client(ExchangeProvider(exchange_id))
     except ValueError as exc:
         raise dg.Failure(f"Unknown exchange partition: {exchange_id}") from exc
 
@@ -37,7 +37,9 @@ def sync_exchange_markets(
 
         for client_market in client_markets:
             seen_symbols.add(client_market.symbol)
-            existing = markets_by_symbol.get(client_market.symbol)
+            existing = markets_by_symbol.get(client_market.symbol) or repo.markets.get(
+                f"{exchange_id}-{client_market.symbol}"
+            )
             if existing is None:
                 to_insert.append(client_market)
             else:
@@ -47,6 +49,7 @@ def sync_exchange_markets(
             repo.markets.save(
                 Market(
                     symbol=client_market.symbol,
+                    raw_symbol=client_market.raw_symbol,
                     base=client_market.base,
                     quote=client_market.quote,
                     exchange=exchange_id,

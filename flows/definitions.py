@@ -1,16 +1,17 @@
 import dagster as dg
 
-from flows.defs.exchanges.assets import exchanges, sync_exchange_markets
+import flows.defs.markets.definitions as markets_definitions
+import flows.defs.ohlcv.definitions as ohlcv_definitions
 from flows.resources.backoffice import BackofficeResource
+from flows.resources.datawarehouse import DatawarehouseResource
 
-defs = dg.Definitions(
-    assets=[sync_exchange_markets],
-    resources={"backoffice": BackofficeResource()},
-    jobs=[
-        dg.define_asset_job(
-            name="sync_exchange_markets_job",
-            selection=dg.AssetSelection.assets(sync_exchange_markets),
-            partitions_def=exchanges,
-        ),
-    ],
+defs = dg.Definitions.merge(
+    markets_definitions.definitions,
+    ohlcv_definitions.definitions,
+    dg.Definitions(
+        resources={
+            "backoffice": BackofficeResource(),
+            "datawarehouse": DatawarehouseResource(),
+        },
+    ),
 )
