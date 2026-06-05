@@ -18,6 +18,9 @@ ATTACH 'ducklake:ducklake_secret' AS ducklake;
 
 USE ducklake;
 
+CALL ducklake.set_option('parquet_compression', 'zstd');
+CALL ducklake.set_option('parquet_compression_level', '5');
+
 CREATE SCHEMA IF NOT EXISTS ducklake.bafrapy;
 
 CREATE TABLE IF NOT EXISTS ducklake.bafrapy.crypto_ohlcv (
