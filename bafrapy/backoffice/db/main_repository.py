@@ -5,9 +5,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from bafrapy.backoffice.db.exchange_repository import ExchangeRepository
-from bafrapy.backoffice.db.market_availability_repository import MarketAvailabilityRepository
+from bafrapy.backoffice.db.market_availability_repository import (
+    MarketAvailabilityRepository,
+)
 from bafrapy.backoffice.db.market_repository import MarketRepository
 from bafrapy.backoffice.db.resolution_repository import ResolutionRepository
+from bafrapy.backoffice.db.task_repository import TaskRepository
 from bafrapy.backoffice.db.uow import UnitOfWork
 from bafrapy.logger import LogField, LoguruLogger as log
 
@@ -20,12 +23,14 @@ class UnitOfWorkContext(UnitOfWork):
     _markets: MarketRepository = field(init=False)
     _resolutions: ResolutionRepository = field(init=False)
     _market_availabilities: MarketAvailabilityRepository = field(init=False)
+    _tasks: TaskRepository = field(init=False)
 
     def __attrs_post_init__(self):
         self._exchanges = ExchangeRepository(self._session)
         self._markets = MarketRepository(self._session)
         self._resolutions = ResolutionRepository(self._session)
         self._market_availabilities = MarketAvailabilityRepository(self._session)
+        self._tasks = TaskRepository(self._session)
 
     def __enter__(self) -> "UnitOfWorkContext":
         return self
@@ -57,6 +62,10 @@ class UnitOfWorkContext(UnitOfWork):
     @property
     def market_availabilities(self) -> MarketAvailabilityRepository:
         return self._market_availabilities
+
+    @property
+    def tasks(self) -> TaskRepository:
+        return self._tasks
 
 
 @define

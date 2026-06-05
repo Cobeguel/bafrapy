@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-exchange_tables = ["exchanges_resolutions", "exchanges", "market_availability", "markets", "resolutions"]
+exchange_tables = ["exchanges_resolutions", "exchanges", "market_availability", "markets", "resolutions", "tasks"]
 
 GENERATION_CONFIGS = [
     {"tables": exchange_tables, "outfile": "tmp/generated/backoffice/models/exchange.py"},
