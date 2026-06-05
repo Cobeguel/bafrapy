@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 import dagster as dg
 
 from bafrapy.backoffice.models import MarketAvailability, SyncStatus
-from bafrapy.exchanges import ExchangeClientResolution, ExchangeProvider, ExchangeSpotClientFactory
+from bafrapy.exchanges import (
+    ExchangeClientResolution,
+    ExchangeProvider,
+    ExchangeSpotClientFactory,
+)
 from flows.resources.backoffice import BackofficeResource
 from flows.resources.datawarehouse import DatawarehouseResource
 

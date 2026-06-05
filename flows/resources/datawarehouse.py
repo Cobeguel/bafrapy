@@ -1,9 +1,13 @@
 import os
 
 import dagster as dg
+
 from dotenv import load_dotenv
 
-from bafrapy.datawarehouse.repository import DucklakeOHLCVRepository, DucklakeOHLCVRepositoryBuilder
+from bafrapy.datawarehouse.repository import (
+    DucklakeOHLCVRepository,
+    DucklakeOHLCVRepositoryBuilder,
+)
 
 load_dotenv()
 

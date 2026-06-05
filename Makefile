@@ -31,8 +31,8 @@ tests:
 	uv run -m pytest -q
 
 tidy:
-	uv run isort bafrapy bafrapy_sqlacodegen scripts workflows
-	uv run ruff format bafrapy bafrapy_sqlacodegen scripts workflows
+	uv run isort bafrapy bafrapy_sqlacodegen scripts flows
+	uv run ruff format bafrapy bafrapy_sqlacodegen scripts flows
 
 compile-generator:
 	uv pip install -e ./bafrapy_sqlacodegen --force-reinstall

@@ -58,7 +58,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["bafrapy*", "workflows*", "flows*"]
+include = ["bafrapy*", "flows*"]
 
 [tool.dg]
 directory_type = "project"

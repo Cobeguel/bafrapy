@@ -1,9 +1,13 @@
 import os
 
 import dagster as dg
+
 from dotenv import load_dotenv
 
-from bafrapy.backoffice.db.main_repository import BackofficeRepository, BackofficeRepositoryBuilder
+from bafrapy.backoffice.db.main_repository import (
+    BackofficeRepository,
+    BackofficeRepositoryBuilder,
+)
 
 load_dotenv()
 
