@@ -8,6 +8,7 @@ from bafrapy.backoffice.models.exchange import (
     Resolution,
     SyncStatus,
 )
+from bafrapy.backoffice.models.tasks import Task, TaskStatus
 
 __all__ = [
     "Base",
@@ -18,4 +19,6 @@ __all__ = [
     "MarketStatus",
     "Resolution",
     "SyncStatus",
+    "Task",
+    "TaskStatus",
 ]
