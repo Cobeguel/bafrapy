@@ -151,3 +151,35 @@ class TestEMoney:
         money = EMoney(value=100, currency=Currency("EUR"), decimals=2)
         with pytest.raises(TypeError):
             _ = money * True
+
+    def test_comparisons_with_int(self):
+        money = EMoney(value=1234, currency=Currency("EUR"), decimals=2)
+        assert money == 1234
+        assert 1234 == money
+        assert money > 34
+        assert 34 < money
+        assert money < 7216312
+        assert 7216312 > money
+        assert money >= 1234
+        assert money <= 1234
+
+    def test_int_comparison_ignores_decimals_metadata(self):
+        money = EMoney(value=1234, currency=Currency("EUR"), decimals=2)
+        assert money == 1234
+        assert money != 12340
+
+    @pytest.mark.parametrize("operation", ["eq", "lt", "le", "gt", "ge"])
+    def test_int_comparison_rejects_bool(self, operation):
+        money = EMoney(value=100, currency=Currency("EUR"), decimals=2)
+
+        with pytest.raises(TypeError):
+            if operation == "eq":
+                _ = money == True
+            elif operation == "lt":
+                _ = money < True
+            elif operation == "le":
+                _ = money <= True
+            elif operation == "gt":
+                _ = money > True
+            else:
+                _ = money >= True

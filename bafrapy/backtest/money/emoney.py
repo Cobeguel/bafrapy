@@ -77,6 +77,9 @@ class EMoney:
         if not isinstance(n, (int, float, Decimal)) or isinstance(n, bool):
             raise TypeError(f"Unsupported number type: {type(n)}")
 
+    def _is_integer(self, other: object) -> bool:
+        return isinstance(other, int) and not isinstance(other, bool)
+
     def _aligned_values(self, m: "EMoney") -> tuple[int, int, int]:
         self._assert_is_valid_emoney(m)
         decimals = max(self.decimals, m.decimals)
@@ -125,25 +128,35 @@ class EMoney:
     def is_zero(self) -> bool:
         return self.value == 0
 
-    def __eq__(self, m: "EMoney") -> bool:
-        self_value, m_value, _ = self._aligned_values(m)
-        return self_value == m_value
+    def __eq__(self, other: "EMoney | int") -> bool:
+        if self._is_integer(other):
+            return self.value == other
+        self_value, other_value, _ = self._aligned_values(other)
+        return self_value == other_value
 
-    def __lt__(self, m: "EMoney") -> bool:
-        self_value, m_value, _ = self._aligned_values(m)
-        return self_value < m_value
+    def __lt__(self, other: "EMoney | int") -> bool:
+        if self._is_integer(other):
+            return self.value < other
+        self_value, other_value, _ = self._aligned_values(other)
+        return self_value < other_value
 
-    def __le__(self, m: "EMoney") -> bool:
-        self_value, m_value, _ = self._aligned_values(m)
-        return self_value <= m_value
+    def __le__(self, other: "EMoney | int") -> bool:
+        if self._is_integer(other):
+            return self.value <= other
+        self_value, other_value, _ = self._aligned_values(other)
+        return self_value <= other_value
 
-    def __gt__(self, m: "EMoney") -> bool:
-        self_value, m_value, _ = self._aligned_values(m)
-        return self_value > m_value
+    def __gt__(self, other: "EMoney | int") -> bool:
+        if self._is_integer(other):
+            return self.value > other
+        self_value, other_value, _ = self._aligned_values(other)
+        return self_value > other_value
 
-    def __ge__(self, m: "EMoney") -> bool:
-        self_value, m_value, _ = self._aligned_values(m)
-        return self_value >= m_value
+    def __ge__(self, other: "EMoney | int") -> bool:
+        if self._is_integer(other):
+            return self.value >= other
+        self_value, other_value, _ = self._aligned_values(other)
+        return self_value >= other_value
 
     def __add__(self, m: "EMoney") -> "EMoney":
         self_value, m_value, decimals = self._aligned_values(m)
