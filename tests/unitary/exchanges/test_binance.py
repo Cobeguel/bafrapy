@@ -248,7 +248,7 @@ class TestBinanceClientOhlcv:
 
         assert fetched_urls == [
             "https://data.bafrapy-test.com/data/spot/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-05.zip",
-            "https://data.bafrapy-test.com/data/spot/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-06.zip",
+            "https://data.bafrapy-test.com/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-06-01.zip",
         ]
 
     def test_process_ohlcv_normalizes_values_and_adds_missing_candles(self, client: BinanceClient) -> None:
