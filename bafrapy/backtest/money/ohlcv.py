@@ -50,19 +50,14 @@ class OHLCV:
         volume: Decimal = Decimal("0.0"),
         quote_volume: Decimal = Decimal("0.0"),
     ) -> "OHLCV":
-        base_decimals = Normalizer.decimal_places(open)
-        if any(Normalizer.decimal_places(value) != base_decimals for value in (high, low, close)):
-            raise ValueError("Base values must use the same decimals")
-        if volume is None:
-            volume = Decimal(0)
-        elif Normalizer.decimal_places(volume) != base_decimals:
-            raise ValueError("Base values must use the same decimals")
+        quote_decimals = Normalizer.decimal_places(open)
+        if any(Normalizer.decimal_places(value) != quote_decimals for value in (high, low, close)):
+            raise ValueError("Quote values must use the same decimals")
 
-        if quote_volume is None:
-            quote_decimals = 0
-            quote_volume = Decimal(0)
-        else:
-            quote_decimals = Normalizer.decimal_places(quote_volume)
+        base_decimals = Normalizer.decimal_places(volume)
+
+        if not quote_volume.is_zero() and Normalizer.decimal_places(quote_volume) != quote_decimals:
+            raise ValueError("Quote values must use the same decimals")
 
         return cls(
             pair=pair,
@@ -70,10 +65,10 @@ class OHLCV:
             base_decimals=base_decimals,
             quote_decimals=quote_decimals,
             timestamp=timestamp,
-            open=Normalizer.normalize_decimal(open, base_decimals),
-            high=Normalizer.normalize_decimal(high, base_decimals),
-            low=Normalizer.normalize_decimal(low, base_decimals),
-            close=Normalizer.normalize_decimal(close, base_decimals),
+            open=Normalizer.normalize_decimal(open, quote_decimals),
+            high=Normalizer.normalize_decimal(high, quote_decimals),
+            low=Normalizer.normalize_decimal(low, quote_decimals),
+            close=Normalizer.normalize_decimal(close, quote_decimals),
             volume=Normalizer.normalize_decimal(volume, base_decimals),
             quote_volume=Normalizer.normalize_decimal(quote_volume, quote_decimals),
         )
@@ -118,19 +113,19 @@ class OHLCV:
 
     @property
     def open_emoney(self) -> EMoney:
-        return EMoney(value=self.open, currency=self.base, decimals=self.base_decimals)
+        return EMoney(value=self.open, currency=self.quote, decimals=self.quote_decimals)
 
     @property
     def high_emoney(self) -> EMoney:
-        return EMoney(value=self.high, currency=self.base, decimals=self.base_decimals)
+        return EMoney(value=self.high, currency=self.quote, decimals=self.quote_decimals)
 
     @property
     def low_emoney(self) -> EMoney:
-        return EMoney(value=self.low, currency=self.base, decimals=self.base_decimals)
+        return EMoney(value=self.low, currency=self.quote, decimals=self.quote_decimals)
 
     @property
     def close_emoney(self) -> EMoney:
-        return EMoney(value=self.close, currency=self.base, decimals=self.base_decimals)
+        return EMoney(value=self.close, currency=self.quote, decimals=self.quote_decimals)
 
     @property
     def volume_emoney(self) -> EMoney:
@@ -141,16 +136,16 @@ class OHLCV:
         return EMoney(value=self.quote_volume, currency=self.quote, decimals=self.quote_decimals)
 
     def decimal_open(self) -> Decimal:
-        return Normalizer.to_decimal(self.open, self.base_decimals)
+        return Normalizer.to_decimal(self.open, self.quote_decimals)
 
     def decimal_high(self) -> Decimal:
-        return Normalizer.to_decimal(self.high, self.base_decimals)
+        return Normalizer.to_decimal(self.high, self.quote_decimals)
 
     def decimal_low(self) -> Decimal:
-        return Normalizer.to_decimal(self.low, self.base_decimals)
+        return Normalizer.to_decimal(self.low, self.quote_decimals)
 
     def decimal_close(self) -> Decimal:
-        return Normalizer.to_decimal(self.close, self.base_decimals)
+        return Normalizer.to_decimal(self.close, self.quote_decimals)
 
     def decimal_volume(self) -> Decimal:
         return Normalizer.to_decimal(self.volume, self.base_decimals)
@@ -159,16 +154,16 @@ class OHLCV:
         return Normalizer.to_decimal(self.quote_volume, self.quote_decimals)
 
     def float_open(self) -> float:
-        return Normalizer.to_float(self.open, self.base_decimals)
+        return Normalizer.to_float(self.open, self.quote_decimals)
 
     def float_high(self) -> float:
-        return Normalizer.to_float(self.high, self.base_decimals)
+        return Normalizer.to_float(self.high, self.quote_decimals)
 
     def float_low(self) -> float:
-        return Normalizer.to_float(self.low, self.base_decimals)
+        return Normalizer.to_float(self.low, self.quote_decimals)
 
     def float_close(self) -> float:
-        return Normalizer.to_float(self.close, self.base_decimals)
+        return Normalizer.to_float(self.close, self.quote_decimals)
 
     def float_volume(self) -> float:
         return Normalizer.to_float(self.volume, self.base_decimals)
